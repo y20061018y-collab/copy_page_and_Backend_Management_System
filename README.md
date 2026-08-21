@@ -50,15 +50,15 @@ PostgreSQL 使用 `postgres_data` Volume，游戏封面使用 `game_uploads`，�
 备份数据库：
 
 ```bash
-docker compose exec -T db pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB" > backup.sql
-docker run --rm -v esports-management-system_game_uploads:/data -v "$PWD":/backup alpine tar czf /backup/game-uploads.tar.gz -C /data .
-docker run --rm -v esports-management-system_studio_uploads:/data -v "$PWD":/backup alpine tar czf /backup/studio-uploads.tar.gz -C /data .
+docker compose exec -T db pg_dump -U esports esports > backup.sql
+docker run --rm -v "$(basename "$PWD")_game_uploads:/data" -v "$PWD":/backup alpine tar czf /backup/game-uploads.tar.gz -C /data .
+docker run --rm -v "$(basename "$PWD")_studio_uploads:/data" -v "$PWD":/backup alpine tar czf /backup/studio-uploads.tar.gz -C /data .
 ```
 
 恢复数据库前停止后端写入，然后执行：
 
 ```bash
-cat backup.sql | docker compose exec -T db psql -U "$POSTGRES_USER" "$POSTGRES_DB"
+cat backup.sql | docker compose exec -T db psql -U esports esports
 ```
 
 上传文件恢复到对应 Volume 后，执行 `docker compose up -d`。

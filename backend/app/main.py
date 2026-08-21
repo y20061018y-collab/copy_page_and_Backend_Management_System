@@ -1,6 +1,8 @@
 import os
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, UploadFile, File, status
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -10,6 +12,9 @@ from app.schemas import AdminPublic, DashboardPublic, GamePublic, GameWrite, Log
 from app.security import COOKIE_NAME, create_token, get_current_admin, password_hash
 
 app = FastAPI(title="11号电竞 API")
+Path("uploads/games").mkdir(parents=True, exist_ok=True)
+Path("uploads/studio").mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 
 @app.on_event("startup")

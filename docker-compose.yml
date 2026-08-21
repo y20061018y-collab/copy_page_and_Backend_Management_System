@@ -24,17 +24,28 @@ services:
     volumes:
       - game_uploads:/app/uploads/games
       - studio_uploads:/app/uploads/studio
-    expose:
-      - "8000"
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
   frontend:
     build: ./frontend
     restart: unless-stopped
     environment:
       API_URL: http://backend:8000
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
       - "3000:3000"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 volumes:
   postgres_data:
   game_uploads:
