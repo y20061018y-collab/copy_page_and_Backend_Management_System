@@ -48,3 +48,14 @@ def test_admin_can_create_game_and_service_then_disable_service():
     assert disabled.status_code == 200
     created = next(item for item in public.json() if item["slug"] == "test-game")
     assert created["services"] == []
+
+
+def test_admin_can_update_site_settings():
+    with TestClient(app) as client:
+        client.post("/api/auth/login", json={"username": "admin", "password": "admin-password"})
+        updated = client.patch("/api/admin/settings", json={"site_name": "新工作室", "site_subtitle": "新副标题", "studio_image": "/images/studio.jpg", "contact_wechat": "wx-test", "contact_qq": "12345", "contact_phone": "13800000000", "contact_description": "欢迎咨询"})
+        public = client.get("/api/settings")
+
+    assert updated.status_code == 200
+    assert public.json()["site_name"] == "新工作室"
+    assert public.json()["contact_wechat"] == "wx-test"

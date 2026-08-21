@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.database import Base, engine, get_db, initialize_database
 from app.models import AdminUser, Game, GameService, SiteSetting
-from app.schemas import AdminPublic, DashboardPublic, GamePublic, GameWrite, LoginRequest, ServicePublic, ServiceWrite, SiteSettingPublic
+from app.schemas import AdminPublic, DashboardPublic, GamePublic, GameWrite, LoginRequest, ServicePublic, ServiceWrite, SiteSettingPublic, SiteSettingWrite
 from app.security import COOKIE_NAME, create_token, get_current_admin, password_hash
 
 app = FastAPI(title="11号电竞 API")
@@ -34,6 +34,17 @@ def list_public_games(db: Session = Depends(get_db)) -> list[Game]:
 @app.get("/api/settings", response_model=SiteSettingPublic)
 def get_public_settings(db: Session = Depends(get_db)) -> SiteSetting:
     return db.scalar(select(SiteSetting).where(SiteSetting.id == 1))
+
+
+@app.patch("/api/admin/settings", response_model=SiteSettingPublic)
+def update_settings(payload: SiteSettingWrite, request: Request, db: Session = Depends(get_db)) -> SiteSetting:
+    require_admin(request, db)
+    setting = db.get(SiteSetting, 1)
+    for key, value in payload.model_dump().items():
+        setattr(setting, key, value.strip() if isinstance(value, str) else value)
+    db.commit()
+    db.refresh(setting)
+    return setting
 
 
 @app.post("/api/auth/login", response_model=AdminPublic)
@@ -168,3 +179,22 @@ def upload_game_cover(request: Request, file: UploadFile = File(...), db: Sessio
     target = directory / f"{secrets.token_urlsafe(16)}{allowed[file.content_type]}"
     target.write_bytes(data)
     return {"path": f"/uploads/games/{target.name}"}
+
+
+@app.post("/api/admin/uploads/studio-image")
+def upload_studio_image(request: Request, file: UploadFile = File(...), db: Session = Depends(get_db)) -> dict[str, str]:
+    require_admin(request, db)
+    allowed = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
+    if file.content_type not in allowed:
+        raise HTTPException(status_code=422, detail="不支持的图片类型")
+    data = file.file.read(5 * 1024 * 1024 + 1)
+    if len(data) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="图片不能超过 5MB")
+    import secrets
+    from pathlib import Path
+
+    directory = Path("uploads/studio")
+    directory.mkdir(parents=True, exist_ok=True)
+    target = directory / f"{secrets.token_urlsafe(16)}{allowed[file.content_type]}"
+    target.write_bytes(data)
+    return {"path": f"/uploads/studio/{target.name}"}

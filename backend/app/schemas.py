@@ -73,3 +73,13 @@ class ServiceWrite(BaseModel):
     description: str = ""
     sort_order: int = 0
     is_active: bool = True
+
+
+class SiteSettingWrite(BaseModel):
+    site_name: str
+    site_subtitle: str
+    studio_image: str | None = None
+    contact_wechat: str | None = None
+    contact_qq: str | None = None
+    contact_phone: str | None = None
+    contact_description: str | None = None
