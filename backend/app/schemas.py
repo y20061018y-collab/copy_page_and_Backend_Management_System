@@ -53,3 +53,23 @@ class DashboardPublic(BaseModel):
     service_count: int
     active_service_count: int
     latest_updated_at: str | None
+
+
+class GameWrite(BaseModel):
+    name: str
+    slug: str
+    tag: str = ""
+    description: str = ""
+    cover_image: str
+    accent_color: str = "#7c3aed"
+    accent_color_2: str = "#06b6d4"
+    sort_order: int = 0
+    is_active: bool = True
+
+
+class ServiceWrite(BaseModel):
+    name: str
+    price: str
+    description: str = ""
+    sort_order: int = 0
+    is_active: bool = True

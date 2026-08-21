@@ -33,3 +33,18 @@ def test_admin_login_sets_cookie_and_dashboard_requires_authentication():
     assert login.status_code == 200
     assert "access_token" in login.cookies
     assert dashboard.json()["game_count"] == 4
+
+
+def test_admin_can_create_game_and_service_then_disable_service():
+    with TestClient(app) as client:
+        client.post("/api/auth/login", json={"username": "admin", "password": "admin-password"})
+        game = client.post("/api/admin/games", json={"name": "测试游戏", "slug": "test-game", "tag": "测试", "description": "测试简介", "cover_image": "/images/games/原神.jpg", "accent_color": "#111111", "accent_color_2": "#222222", "sort_order": 99, "is_active": True})
+        service = client.post(f"/api/admin/games/{game.json()['id']}/services", json={"name": "测试服务", "price": "¥ 10", "description": "说明", "sort_order": 0, "is_active": True})
+        disabled = client.post(f"/api/admin/services/{service.json()['id']}/disable")
+        public = client.get("/api/games")
+
+    assert game.status_code == 201
+    assert service.status_code == 201
+    assert disabled.status_code == 200
+    created = next(item for item in public.json() if item["slug"] == "test-game")
+    assert created["services"] == []
