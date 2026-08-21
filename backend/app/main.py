@@ -3,8 +3,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import Base, engine, get_db, initialize_database
-from app.models import Game
-from app.schemas import GamePublic
+from app.models import Game, SiteSetting
+from app.schemas import GamePublic, SiteSettingPublic
 
 app = FastAPI(title="11号电竞 API")
 
@@ -26,3 +26,8 @@ def list_public_games(db: Session = Depends(get_db)) -> list[Game]:
     for game in games:
         game.services = sorted((service for service in game.services if service.is_active), key=lambda service: (service.sort_order, service.id))
     return games
+
+
+@app.get("/api/settings", response_model=SiteSettingPublic)
+def get_public_settings(db: Session = Depends(get_db)) -> SiteSetting:
+    return db.scalar(select(SiteSetting).where(SiteSetting.id == 1))
