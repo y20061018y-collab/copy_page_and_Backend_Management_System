@@ -83,3 +83,8 @@ class SiteSettingWrite(BaseModel):
     contact_qq: str | None = None
     contact_phone: str | None = None
     contact_description: str | None = None
+
+
+class ReorderItem(BaseModel):
+    id: int
+    sort_order: int

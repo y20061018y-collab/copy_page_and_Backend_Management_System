@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.database import Base, engine, get_db, initialize_database
 from app.models import AdminUser, Game, GameService, SiteSetting
-from app.schemas import AdminPublic, DashboardPublic, GamePublic, GameWrite, LoginRequest, ServicePublic, ServiceWrite, SiteSettingPublic, SiteSettingWrite
+from app.schemas import AdminPublic, DashboardPublic, GamePublic, GameWrite, LoginRequest, ReorderItem, ServicePublic, ServiceWrite, SiteSettingPublic, SiteSettingWrite
 from app.security import COOKIE_NAME, create_token, get_current_admin, password_hash
 
 app = FastAPI(title="11号电竞 API")
@@ -117,6 +117,18 @@ def update_game(game_id: int, payload: GameWrite, request: Request, db: Session 
     return game
 
 
+@app.patch("/api/admin/games/reorder")
+def reorder_games(items: list[ReorderItem], request: Request, db: Session = Depends(get_db)) -> dict[str, bool]:
+    require_admin(request, db)
+    games = {game.id: game for game in db.scalars(select(Game).where(Game.id.in_([item.id for item in items])))}
+    if len(games) != len(items):
+        raise HTTPException(status_code=404, detail="游戏不存在")
+    for item in items:
+        games[item.id].sort_order = item.sort_order
+    db.commit()
+    return {"ok": True}
+
+
 @app.post("/api/admin/games/{game_id}/state/{action}", response_model=GamePublic)
 def set_game_state(game_id: int, action: str, request: Request, db: Session = Depends(get_db)) -> Game:
     require_admin(request, db)
@@ -165,6 +177,18 @@ def set_service_state(service_id: int, action: str, request: Request, db: Sessio
     db.commit()
     db.refresh(service)
     return service
+
+
+@app.patch("/api/admin/games/{game_id}/services/reorder")
+def reorder_services(game_id: int, items: list[ReorderItem], request: Request, db: Session = Depends(get_db)) -> dict[str, bool]:
+    require_admin(request, db)
+    services = {service.id: service for service in db.scalars(select(GameService).where(GameService.game_id == game_id, GameService.id.in_([item.id for item in items])))}
+    if len(services) != len(items):
+        raise HTTPException(status_code=404, detail="服务不存在")
+    for item in items:
+        services[item.id].sort_order = item.sort_order
+    db.commit()
+    return {"ok": True}
 
 
 @app.post("/api/admin/uploads/game-cover")
