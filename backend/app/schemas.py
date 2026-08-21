@@ -35,3 +35,21 @@ class SiteSettingPublic(BaseModel):
     contact_qq: str | None
     contact_phone: str | None
     contact_description: str | None
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class AdminPublic(BaseModel):
+    id: int
+    username: str
+
+
+class DashboardPublic(BaseModel):
+    game_count: int
+    active_game_count: int
+    service_count: int
+    active_service_count: int
+    latest_updated_at: str | None

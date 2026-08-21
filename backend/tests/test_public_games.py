@@ -21,3 +21,15 @@ def test_public_settings_returns_contact_fields():
     assert response.status_code == 200
     assert response.json()["site_name"] == "11号电竞"
     assert response.json()["contact_description"] == "欢迎联系我们咨询服务详情"
+
+
+def test_admin_login_sets_cookie_and_dashboard_requires_authentication():
+    with TestClient(app) as client:
+        denied = client.get("/api/admin/dashboard")
+        login = client.post("/api/auth/login", json={"username": "admin", "password": "admin-password"})
+        dashboard = client.get("/api/admin/dashboard")
+
+    assert denied.status_code == 401
+    assert login.status_code == 200
+    assert "access_token" in login.cookies
+    assert dashboard.json()["game_count"] == 4

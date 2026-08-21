@@ -25,7 +25,10 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def initialize_database() -> None:
-    from app.models import Game, GameService, SiteSetting
+    import os
+
+    from app.models import AdminUser, Game, GameService, SiteSetting
+    from app.security import password_hash
 
     Base.metadata.create_all(engine)
     with SessionLocal() as db:
@@ -33,3 +36,6 @@ def initialize_database() -> None:
             from app.seed import seed_database
 
             seed_database(db)
+        if not db.query(AdminUser).count():
+            db.add(AdminUser(username=os.getenv("ADMIN_USERNAME", "admin"), password_hash=password_hash.hash(os.getenv("ADMIN_PASSWORD", "admin-password"))))
+            db.commit()
