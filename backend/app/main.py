@@ -10,6 +10,7 @@ from app.database import Base, engine, get_db, initialize_database
 from app.models import AdminUser, Game, GameService, SiteSetting
 from app.schemas import AdminPublic, DashboardPublic, GamePublic, GameWrite, LoginRequest, ReorderItem, ServicePublic, ServiceWrite, SiteSettingPublic, SiteSettingWrite
 from app.security import COOKIE_NAME, create_token, get_current_admin, password_hash
+from app.errors import api_error
 
 app = FastAPI(title="11号电竞 API")
 Path("uploads/games").mkdir(parents=True, exist_ok=True)
@@ -58,7 +59,7 @@ def login(payload: LoginRequest, response: Response, db: Session = Depends(get_d
     if not user or not user.is_active or not password_hash.verify(payload.password, user.password_hash):
         from fastapi import HTTPException
 
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="账号或密码错误")
+        return api_error("AUTH_INVALID_CREDENTIALS", "账号或密码错误", status.HTTP_401_UNAUTHORIZED)
     response.set_cookie(COOKIE_NAME, create_token(user), httponly=True, secure=os.getenv("COOKIE_SECURE", "false").lower() == "true", samesite=os.getenv("COOKIE_SAMESITE", "lax"), max_age=7 * 24 * 60 * 60)
     return user
 
@@ -200,6 +201,8 @@ def upload_game_cover(request: Request, file: UploadFile = File(...), db: Sessio
     data = file.file.read(5 * 1024 * 1024 + 1)
     if len(data) > 5 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="图片不能超过 5MB")
+    if not data.startswith((b"\xff\xd8\xff", b"\x89PNG\r\n\x1a\n", b"RIFF")):
+        raise HTTPException(status_code=422, detail="图片内容无效")
     import secrets
     from pathlib import Path
 
@@ -219,6 +222,8 @@ def upload_studio_image(request: Request, file: UploadFile = File(...), db: Sess
     data = file.file.read(5 * 1024 * 1024 + 1)
     if len(data) > 5 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="图片不能超过 5MB")
+    if not data.startswith((b"\xff\xd8\xff", b"\x89PNG\r\n\x1a\n", b"RIFF")):
+        raise HTTPException(status_code=422, detail="图片内容无效")
     import secrets
     from pathlib import Path
 

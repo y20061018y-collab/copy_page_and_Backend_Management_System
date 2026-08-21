@@ -59,3 +59,16 @@ def test_admin_can_update_site_settings():
     assert updated.status_code == 200
     assert public.json()["site_name"] == "新工作室"
     assert public.json()["contact_wechat"] == "wx-test"
+
+
+def test_invalid_login_returns_structured_error_and_logout_clears_cookie():
+    with TestClient(app) as client:
+        invalid = client.post("/api/auth/login", json={"username": "admin", "password": "wrong"})
+        client.post("/api/auth/login", json={"username": "admin", "password": "admin-password"})
+        logged_out = client.post("/api/auth/logout")
+        current = client.get("/api/auth/me")
+
+    assert invalid.status_code == 401
+    assert invalid.json()["code"] == "AUTH_INVALID_CREDENTIALS"
+    assert logged_out.status_code == 204
+    assert current.status_code == 401
