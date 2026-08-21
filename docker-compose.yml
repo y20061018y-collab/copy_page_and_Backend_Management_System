@@ -41,11 +41,6 @@ services:
         condition: service_healthy
     ports:
       - "3000:3000"
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
 volumes:
   postgres_data:
   game_uploads:
