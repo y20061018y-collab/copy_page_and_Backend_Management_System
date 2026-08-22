@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>11号电竞｜游戏需求展示页</title>
+    <link rel="stylesheet" href="11-esports-demand-page.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="nav">
+        <div class="brand"><span class="brand-image-wrap"><img src="../图片/工作室图标.jpg" alt="11号电竞工作室图标" /></span><strong>11号电竞</strong><span>专业游戏服务工作室</span></div>
+        <button type="button">立即咨询</button>
+      </header>
+      <section class="hero">
+        <div class="hero-copy">
+          <p>ELEVEN ESPORTS STUDIO</p>
+          <h1>把游戏交给<span>专业的人</span></h1>
+          <p class="hero-description">稳定 · 高效 · 值得信赖<br />专注每一次成长体验</p>
+        </div>
+        <div class="hero-emblem" aria-hidden="true">
+          <div class="emblem-frame"><img src="../图片/工作室图标.jpg" alt="" /></div>
+        </div>
+      </section>
+      <section class="workspace">
+        <aside>
+          <div class="game-section-copy">
+            <h2>选择你的游戏</h2>
+            <p>每一份服务，都为更好的游戏体验而生</p>
+          </div>
+          <div class="game-list">
+            <button class="game active"><img class="game-icon icon-genshin" src="../图片/原神.jpg" alt="原神" /><span><strong>原神</strong><small>提瓦特大陆冒险代肝</small></span><i>→</i></button>
+            <button class="game"><img class="game-icon icon-star-rail" src="../图片/崩坏·星穹铁道.jpg" alt="崩坏：星穹铁道" /><span><strong>崩坏：星穹铁道</strong><small>银河冒险代肝</small></span></button>
+            <button class="game"><img class="game-icon icon-zenless" src="../图片/绝区零.jpg" alt="绝区零" /><span><strong>绝区零</strong><small>新艾利都都市代肝</small></span></button>
+            <button class="game"><img class="game-icon icon-wuthering" src="../图片/鸣潮.jpg" alt="鸣潮" /><span><strong>鸣潮</strong><small>黎那汐塔大陆代肝</small></span></button>
+          </div>
+        </aside>
+        <section class="demands">
+          <div class="demand-title"><div><p class="eyebrow">需求</p><h2>原神 · 服务需求</h2></div><span>3 项需求</span></div>
+          <article class="demand-card" data-price="30" role="button" tabindex="0"><b>01</b><div><h3>开荒规划与任务推进</h3><p>基于账号进度制定每日路线、资源优先级与探索节奏。</p><em>进度规划</em><em>任务协助</em></div></article>
+          <article class="demand-card" data-price="50" role="button" tabindex="0"><b class="cyan">02</b><div><h3>角色养成与配队建议</h3><p>依据已有角色与资源，给出高性价比的培养和队伍搭配方案。</p><em>配队建议</em><em>资源规划</em></div></article>
+          <article class="demand-card" data-price="25" role="button" tabindex="0"><b>03</b><div><h3>深境螺旋与高难挑战</h3><p>根据当期环境复盘阵容，提供通关思路、操作建议和目标拆解。</p><em>深境螺旋</em><em>阵容复盘</em></div></article>
+        </section>
+      </section>
+      <div class="modal-backdrop" id="service-modal" hidden>
+        <section class="service-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+          <button class="modal-close" type="button" aria-label="关闭服务详情">×</button>
+          <figure class="modal-cover">
+            <img src="https://4kvx6b6njhha5.feishuapp.com/spark/app/app_17cgwjc2411/runtime/api/v1/storage/object/bucket_aadkq4vcqwufq_static/static%2Faadkq63ilbkeq_ve_miaoda" alt="服务封面图，可替换" />
+            <figcaption><span>原神 · 服务详情</span></figcaption>
+          </figure>
+          <div class="modal-body">
+            <section class="service-price-list" aria-label="服务报价明细">
+              <div class="price-row"><div><h3>深境螺旋 · 12层满星</h3><p>按当期环境配队，完成指定层数挑战。</p></div><strong>¥ 30</strong></div>
+              <div class="price-row"><div><h3>深境螺旋 · 9–12层全通</h3><p>覆盖全部指定楼层，并提供阵容复盘建议。</p></div><strong>¥ 50</strong></div>
+              <div class="price-row"><div><h3>每日委托 · 周卡</h3><p>连续七日完成日常委托及基础资源领取。</p></div><strong>¥ 25</strong></div>
+              <div class="price-row"><div><h3>树脂体力 · 日刷</h3><p>按目标材料完成当日体力规划与刷取。</p></div><strong>¥ 10</strong></div>
+            </section>
+          </div>
+        </section>
+      </div>
+    </main>
+    <script>
+      const modal = document.querySelector('#service-modal');
+      const closeModal = () => { modal.hidden = true; document.body.classList.remove('modal-open'); };
+      const openModal = () => { modal.hidden = false; document.body.classList.add('modal-open'); };
+      document.querySelectorAll('.demand-card').forEach((card) => {
+        card.addEventListener('click', openModal);
+        card.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openModal(); } });
+      });
+      document.querySelector('.modal-close').addEventListener('click', closeModal);
+      modal.addEventListener('click', (event) => { if (event.target === modal) closeModal(); });
+      document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !modal.hidden) closeModal(); });
+    </script>
+  </body>
+</html>

@@ -2,7 +2,7 @@ from collections.abc import Generator
 from pathlib import Path
 import os
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 
@@ -25,12 +25,19 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def initialize_database() -> None:
-    import os
-
     from app.models import AdminUser, Game, GameService, SiteSetting
     from app.security import password_hash
 
-    Base.metadata.create_all(engine)
+    required_tables = {"games", "game_services", "site_settings", "admin_users"}
+    existing_tables = set(inspect(engine).get_table_names())
+    missing_tables = required_tables - existing_tables
+    if missing_tables:
+        missing = ", ".join(sorted(missing_tables))
+        raise RuntimeError(
+            f"数据库尚未完成 Alembic 迁移，缺少表：{missing}。"
+            "请先在 backend 目录执行：alembic upgrade head"
+        )
+
     with SessionLocal() as db:
         if not db.query(Game).count():
             from app.seed import seed_database

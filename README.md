@@ -31,6 +31,25 @@ npm run dev
 
 开发默认管理员为 `admin` / `admin-password`，生产环境必须通过 `.env` 修改。
 
+前台地址为 `http://127.0.0.1:3000`，后台地址为 `http://127.0.0.1:3000/admin`，后端 API 文档为 `http://127.0.0.1:8000/docs`。
+
+### 数据库迁移说明
+
+Alembic 是数据库结构的唯一迁移入口。每次拉取包含数据库变更的代码后，先在 `backend/` 目录执行：
+
+```powershell
+alembic upgrade head
+```
+
+如果是已有的本地 SQLite 数据库，并且其中的表已经由旧版本创建、但 Alembic 尚未记录版本，请不要删除 `esports.db`。确认表结构与当前代码一致后，执行一次：
+
+```powershell
+alembic stamp head
+alembic current
+```
+
+这只会同步迁移记录，不会创建、删除或修改业务数据。之后可正常使用 `alembic upgrade head`。不要把已有数据库重新标记为旧版本（例如 `0001_initial`），否则 Alembic 会再次尝试创建已存在的表。
+
 ## Ubuntu 部署
 
 1. 安装 Ubuntu 22.04/24.04、Docker Compose Plugin、Git 和 Nginx。

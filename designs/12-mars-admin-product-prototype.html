@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>11号电竞 · 后台产品原型</title>
+  <style>
+    :root {
+      --bg: #f4f6fa;
+      --panel: #ffffff;
+      --ink: #202434;
+      --muted: #7a849b;
+      --line: #e7eaf1;
+      --primary: #5b52f3;
+      --primary-soft: #eeedff;
+      --cyan: #28b8d9;
+      --success: #18aa74;
+      --warning: #f0a52b;
+      --danger: #f05b66;
+      --nav: #111525;
+      --shadow: 0 10px 30px rgba(25, 32, 56, .06);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 1180px;
+      color: var(--ink);
+      background: var(--bg);
+      font: 14px/1.5 Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .prototype-note {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px;
+      border-radius: 16px;
+      background: rgba(16, 20, 34, .94);
+      color: #fff;
+      box-shadow: 0 14px 40px rgba(16, 20, 34, .28);
+      transform: translateX(-50%);
+    }
+    .prototype-note button {
+      width: 36px;
+      height: 36px;
+      border: 0;
+      border-radius: 10px;
+      color: #fff;
+      background: rgba(255,255,255,.1);
+    }
+    .prototype-note span { min-width: 210px; text-align: center; font-weight: 700; }
+    body.capture .prototype-note { display: none; }
+
+    .app { min-height: 100vh; display: grid; grid-template-columns: 232px 1fr; }
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 22px 14px;
+      overflow: hidden;
+      color: #adb5cb;
+      background: var(--nav);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      height: 54px;
+      padding: 0 10px 18px;
+      margin-bottom: 14px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .brand img { width: 38px; height: 38px; border-radius: 11px; object-fit: cover; }
+    .brand strong { display: block; color: #fff; font-size: 16px; letter-spacing: .02em; }
+    .brand small { color: #727d98; font-size: 11px; }
+    .nav-label { padding: 14px 12px 8px; color: #626d87; font-size: 10px; font-weight: 800; letter-spacing: .16em; }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      height: 44px;
+      padding: 0 13px;
+      margin: 3px 0;
+      border-radius: 10px;
+      color: #aeb7ce;
+      text-decoration: none;
+    }
+    .nav-item:hover, .nav-item.active { color: #fff; background: linear-gradient(90deg, #5d54f3, #4a49cf); }
+    .nav-item svg { width: 18px; height: 18px; flex: 0 0 auto; }
+    .nav-item .badge { margin-left: auto; min-width: 20px; padding: 1px 6px; border-radius: 8px; color: #b9b6ff; background: rgba(130,120,255,.14); font-size: 10px; text-align: center; }
+    .nav-item.active .badge { color: #5b52f3; background: #fff; }
+    .sidebar-card {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: 20px;
+      padding: 14px;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 13px;
+      background: rgba(255,255,255,.04);
+    }
+    .sidebar-card strong { display: block; margin-bottom: 4px; color: #fff; }
+    .sidebar-card small { color: #77819a; }
+    .progress { height: 5px; margin: 12px 0 5px; border-radius: 4px; background: rgba(255,255,255,.08); overflow: hidden; }
+    .progress i { display: block; width: 42%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #5b52f3, #2bc5dc); }
+
+    .main { min-width: 0; }
+    .topbar {
+      height: 68px;
+      display: flex;
+      align-items: center;
+      padding: 0 28px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.94);
+    }
+    .crumb { color: #98a0b3; }
+    .crumb b { color: #34394a; }
+    .top-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+    .search {
+      width: 226px;
+      height: 38px;
+      padding: 0 14px 0 36px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      outline: none;
+      background: #f8f9fc;
+    }
+    .search-wrap { position: relative; }
+    .search-wrap svg { position: absolute; top: 11px; left: 12px; width: 16px; color: #98a0b3; }
+    .icon-btn { width: 38px; height: 38px; border: 1px solid var(--line); border-radius: 10px; color: #677089; background: #fff; }
+    .admin-user { display: flex; align-items: center; gap: 9px; margin-left: 4px; padding-left: 14px; border-left: 1px solid var(--line); }
+    .avatar { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; color: #fff; font-weight: 800; background: linear-gradient(145deg, #6256f4, #27bddb); }
+    .admin-user strong { display: block; font-size: 13px; }
+    .admin-user small { color: #929aae; font-size: 11px; }
+
+    .content { padding: 26px 28px 84px; }
+    .page-head { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 22px; }
+    .page-head h1 { margin: 0 0 4px; font-size: 25px; letter-spacing: -.03em; }
+    .page-head p { margin: 0; color: var(--muted); }
+    .primary-btn { height: 40px; padding: 0 16px; border: 0; border-radius: 10px; color: #fff; font-weight: 700; background: linear-gradient(135deg, #6658f5, #4c6cf4); box-shadow: 0 8px 18px rgba(91,82,243,.2); }
+    .ghost-btn { height: 40px; padding: 0 14px; margin-right: 8px; border: 1px solid var(--line); border-radius: 10px; color: #596178; background: #fff; }
+    .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 16px; }
+    .stat {
+      position: relative;
+      min-height: 124px;
+      padding: 19px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .stat-top { display: flex; justify-content: space-between; color: var(--muted); }
+    .stat-icon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 11px; }
+    .stat:nth-child(1) .stat-icon { color: #5b52f3; background: #efedff; }
+    .stat:nth-child(2) .stat-icon { color: #159c77; background: #e5f8f1; }
+    .stat:nth-child(3) .stat-icon { color: #159dba; background: #e4f8fb; }
+    .stat:nth-child(4) .stat-icon { color: #ed9d22; background: #fff3dd; }
+    .stat strong { display: block; margin-top: 5px; font-size: 28px; letter-spacing: -.03em; }
+    .stat small { color: #9ca3b5; }
+    .trend { margin-left: 6px; color: var(--success); font-weight: 700; }
+
+    .grid-7-5 { display: grid; grid-template-columns: minmax(0, 7fr) minmax(330px, 5fr); gap: 16px; margin-bottom: 16px; }
+    .panel { border: 1px solid var(--line); border-radius: 15px; background: var(--panel); box-shadow: var(--shadow); }
+    .panel-head { display: flex; align-items: center; min-height: 60px; padding: 0 18px; border-bottom: 1px solid var(--line); }
+    .panel-head h2 { margin: 0; font-size: 15px; }
+    .panel-head span { margin-left: 8px; color: var(--muted); font-size: 12px; }
+    .panel-head a { margin-left: auto; color: var(--primary); font-size: 12px; text-decoration: none; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { height: 58px; padding: 0 18px; border-bottom: 1px solid #f0f2f6; text-align: left; }
+    th { height: 44px; color: #9199ad; background: #fafbfc; font-size: 11px; font-weight: 600; }
+    tr:last-child td { border-bottom: 0; }
+    .game-cell { display: flex; align-items: center; gap: 11px; }
+    .game-cell img { width: 34px; height: 34px; border-radius: 9px; object-fit: cover; }
+    .game-cell b { display: block; font-size: 13px; }
+    .game-cell small { color: #9aa2b4; }
+    .status { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 8px; color: #168b65; background: #e8f8f1; font-size: 11px; }
+    .status::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+    .tag { padding: 3px 8px; border-radius: 8px; color: #655cd5; background: #f0efff; font-size: 11px; }
+    .more { color: #a4abba; letter-spacing: .16em; }
+
+    .health-body { padding: 18px; }
+    .health-score { display: flex; align-items: center; gap: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+    .ring { width: 80px; height: 80px; display: grid; place-items: center; border-radius: 50%; background: conic-gradient(var(--primary) 0 94%, #eceffa 94% 100%); }
+    .ring::after { content: "94"; width: 62px; height: 62px; display: grid; place-items: center; border-radius: 50%; background: #fff; font-size: 22px; font-weight: 800; }
+    .health-score strong { display: block; font-size: 15px; }
+    .health-score p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+    .health-item { display: grid; grid-template-columns: 1fr auto; gap: 4px; padding: 13px 0; border-bottom: 1px solid #f0f2f6; }
+    .health-item:last-child { border: 0; }
+    .health-item b { font-size: 12px; }
+    .health-item span { color: var(--muted); font-size: 11px; }
+    .health-item em { grid-row: 1 / 3; grid-column: 2; align-self: center; color: var(--success); font-style: normal; font-size: 12px; }
+
+    .quick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 11px; padding: 16px; }
+    .quick {
+      min-height: 86px;
+      padding: 14px;
+      border: 1px solid #edf0f5;
+      border-radius: 12px;
+      background: #fafbfe;
+    }
+    .quick i { width: 30px; height: 30px; display: grid; place-items: center; margin-bottom: 9px; border-radius: 9px; color: var(--primary); background: var(--primary-soft); font-style: normal; }
+    .quick b { display: block; font-size: 12px; }
+    .quick small { color: #9aa2b3; font-size: 10px; }
+    .activity { padding: 6px 18px 14px; }
+    .activity-row { position: relative; display: grid; grid-template-columns: 32px 1fr auto; gap: 11px; align-items: center; min-height: 58px; }
+    .activity-row:not(:last-child)::after { content: ""; position: absolute; left: 15px; top: 45px; bottom: -12px; width: 1px; background: #e5e8ef; }
+    .activity-dot { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 10px; color: var(--primary); background: var(--primary-soft); font-size: 11px; font-weight: 800; }
+    .activity-row b { display: block; font-size: 12px; }
+    .activity-row small, .activity-row time { color: #9aa2b3; font-size: 10px; }
+
+    /* Variant B: content operations, deliberately table-first. */
+    body.variant-b { --primary: #7357e8; --primary-soft: #f0ebff; --nav: #fff; }
+    .variant-b .app { grid-template-columns: 82px 1fr; }
+    .variant-b .sidebar { color: #6f7890; border-right: 1px solid var(--line); background: #fff; }
+    .variant-b .brand { justify-content: center; padding: 0 0 18px; }
+    .variant-b .brand img { width: 42px; height: 42px; }
+    .variant-b .brand div, .variant-b .nav-label, .variant-b .nav-item span, .variant-b .nav-item .badge, .variant-b .sidebar-card { display: none; }
+    .variant-b .nav-item { justify-content: center; padding: 0; color: #747d92; }
+    .variant-b .nav-item.active { color: #fff; }
+    .variant-b .page-head { margin-bottom: 18px; }
+    .variant-b .stats { grid-template-columns: 1.35fr 1fr 1fr; }
+    .variant-b .stat:nth-child(4) { display: none; }
+    .variant-b .grid-7-5 { grid-template-columns: 1fr; }
+    .variant-b .health-panel { display: none; }
+    .variant-b .catalog-panel table td, .variant-b .catalog-panel table th { height: 64px; }
+    .variant-b .bottom-grid { grid-template-columns: 1fr 1fr; }
+
+    /* Variant C: dark command centre with three columns. */
+    body.variant-c { --bg: #0c1020; --panel: #141a2d; --ink: #edf0ff; --muted: #8892ae; --line: #242b43; --primary: #8d78ff; --primary-soft: #29244d; --nav: #101526; }
+    .variant-c .topbar { color: var(--ink); background: #111629; border-color: var(--line); }
+    .variant-c .search, .variant-c .icon-btn { color: #aab2ca; background: #171d31; border-color: var(--line); }
+    .variant-c .admin-user strong, .variant-c .crumb b { color: #fff; }
+    .variant-c .panel, .variant-c .stat { box-shadow: none; }
+    .variant-c th { color: #8490ae; background: #111628; }
+    .variant-c td, .variant-c th, .variant-c .panel-head, .variant-c .health-score, .variant-c .health-item, .variant-c .activity-row:not(:last-child)::after { border-color: var(--line); }
+    .variant-c .quick { color: var(--ink); background: #11172a; border-color: var(--line); }
+    .variant-c .ring::after { background: var(--panel); }
+    .variant-c .status { color: #63ddb1; background: rgba(33,170,122,.15); }
+    .variant-c .tag { color: #b7abff; background: rgba(141,120,255,.15); }
+    .variant-c .ghost-btn { color: #c2c8da; background: #171d31; border-color: var(--line); }
+
+    @media (max-width: 1280px) {
+      .app { grid-template-columns: 208px 1fr; }
+      .content { padding-left: 20px; padding-right: 20px; }
+      .search-wrap { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Three variants of the 11号电竞 admin dashboard, switchable via ?variant=. -->
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="../frontend/public/images/studio.jpg" alt="11号电竞" />
+        <div><strong>11号电竞</strong><small>运营管理中心</small></div>
+      </div>
+      <div class="nav-label">WORKSPACE</div>
+      <a class="nav-item active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11 12 3l9 8v9a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg><span>控制台</span></a>
+      <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8 9h8M8 14h5"/></svg><span>游戏目录</span><b class="badge">4</b></a>
+      <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h10v4H7zM5 7h14v14H5zM8 11h8M8 15h5"/></svg><span>服务项目</span><b class="badge">12</b></a>
+      <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="15" rx="3"/><circle cx="8" cy="10" r="2"/><path d="m5 18 5-5 3 3 2-2 4 4"/></svg><span>媒体素材</span></a>
+      <div class="nav-label">SYSTEM</div>
+      <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1z"/></svg><span>网站设置</span></a>
+      <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c.7-4 3.3-6 8-6s7.3 2 8 6"/></svg><span>管理员账号</span></a>
+      <a class="nav-item" href="../frontend/" target="_blank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg><span>查看前台</span></a>
+      <div class="sidebar-card"><strong>素材空间</strong><small>已使用 42 MB / 100 MB</small><div class="progress"><i></i></div><small>图片格式 JPG / PNG / WebP</small></div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="crumb">工作台&nbsp; / &nbsp;<b>控制台</b></div>
+        <div class="top-actions">
+          <div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input class="search" placeholder="搜索游戏、服务或设置" /></div>
+          <button class="icon-btn" title="通知">◌</button>
+          <button class="icon-btn" title="全屏">↗</button>
+          <div class="admin-user"><span class="avatar">11</span><div><strong>超级管理员</strong><small>admin</small></div></div>
+        </div>
+      </header>
+
+      <div class="content">
+        <section class="page-head">
+          <div><h1>下午好，欢迎回来 👋</h1><p>这是 11号电竞当前的运营状态，所有核心内容都在正常展示。</p></div>
+          <div><button class="ghost-btn">预览前台</button><button class="primary-btn">＋ 新增游戏</button></div>
+        </section>
+
+        <section class="stats">
+          <article class="stat"><div class="stat-top"><span>游戏总数</span><span class="stat-icon">▦</span></div><strong>4</strong><small>全部已启用 <span class="trend">100%</span></small></article>
+          <article class="stat"><div class="stat-top"><span>服务项目</span><span class="stat-icon">☷</span></div><strong>12</strong><small>平均每个游戏 3 项</small></article>
+          <article class="stat"><div class="stat-top"><span>已上传素材</span><span class="stat-icon">◫</span></div><strong>9</strong><small>游戏封面与工作室图标</small></article>
+          <article class="stat"><div class="stat-top"><span>待完善内容</span><span class="stat-icon">!</span></div><strong>2</strong><small>服务描述建议补充</small></article>
+        </section>
+
+        <section class="grid-7-5">
+          <article class="panel catalog-panel">
+            <div class="panel-head"><h2>游戏目录</h2><span>前台展示顺序与服务概况</span><a href="#">管理全部 →</a></div>
+            <table>
+              <thead><tr><th>游戏</th><th>分类</th><th>服务数</th><th>状态</th><th>操作</th></tr></thead>
+              <tbody>
+                <tr><td><div class="game-cell"><img src="../frontend/public/images/games/原神.jpg"><div><b>原神</b><small>genshin</small></div></div></td><td><span class="tag">开放世界</span></td><td>3 项</td><td><span class="status">展示中</span></td><td class="more">•••</td></tr>
+                <tr><td><div class="game-cell"><img src="../frontend/public/images/games/崩坏·星穹铁道.jpg"><div><b>崩坏：星穹铁道</b><small>star-rail</small></div></div></td><td><span class="tag">回合 RPG</span></td><td>3 项</td><td><span class="status">展示中</span></td><td class="more">•••</td></tr>
+                <tr><td><div class="game-cell"><img src="../frontend/public/images/games/绝区零.jpg"><div><b>绝区零</b><small>zenless-zone-zero</small></div></div></td><td><span class="tag">动作 ARPG</span></td><td>3 项</td><td><span class="status">展示中</span></td><td class="more">•••</td></tr>
+                <tr><td><div class="game-cell"><img src="../frontend/public/images/games/鸣潮.jpg"><div><b>鸣潮</b><small>wuthering-waves</small></div></div></td><td><span class="tag">开放世界</span></td><td>3 项</td><td><span class="status">展示中</span></td><td class="more">•••</td></tr>
+              </tbody>
+            </table>
+          </article>
+          <article class="panel health-panel">
+            <div class="panel-head"><h2>内容健康度</h2><span>前台资料完整性</span></div>
+            <div class="health-body">
+              <div class="health-score"><div class="ring"></div><div><strong>内容状态良好</strong><p>游戏、服务和站点资料均可正常展示。</p></div></div>
+              <div class="health-item"><b>游戏封面与图标</b><span>4 / 4 已上传</span><em>完整</em></div>
+              <div class="health-item"><b>服务介绍与价格</b><span>12 / 12 已填写</span><em>完整</em></div>
+              <div class="health-item"><b>咨询联系方式</b><span>微信、QQ、电话</span><em>已配置</em></div>
+            </div>
+          </article>
+        </section>
+
+        <section class="grid-7-5 bottom-grid">
+          <article class="panel">
+            <div class="panel-head"><h2>快捷操作</h2><span>常用后台功能</span></div>
+            <div class="quick-grid">
+              <div class="quick"><i>＋</i><b>新增游戏</b><small>封面、介绍、排序</small></div>
+              <div class="quick"><i>¥</i><b>服务与价格</b><small>描述、启停、排序</small></div>
+              <div class="quick"><i>▧</i><b>素材管理</b><small>查看与替换图片</small></div>
+              <div class="quick"><i>⚙</i><b>站点资料</b><small>名称与联系方式</small></div>
+            </div>
+          </article>
+          <article class="panel">
+            <div class="panel-head"><h2>最近操作</h2><span>内容更新时间线</span><a href="#">查看全部</a></div>
+            <div class="activity">
+              <div class="activity-row"><span class="activity-dot">YS</span><div><b>更新了「原神」服务价格</b><small>深境螺旋 · 9–12层全通</small></div><time>10 分钟前</time></div>
+              <div class="activity-row"><span class="activity-dot">WW</span><div><b>修改了「鸣潮」游戏介绍</b><small>前台描述与游戏标签</small></div><time>昨天 18:32</time></div>
+              <div class="activity-row"><span class="activity-dot">SET</span><div><b>更新网站联系方式</b><small>工作室微信与咨询说明</small></div><time>08-20 14:08</time></div>
+            </div>
+          </article>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="prototype-note" aria-label="原型方案切换器"><button id="prev">←</button><span id="variantLabel">A — Mars 企业运营台</span><button id="next">→</button></div>
+  <script>
+    const variants = [
+      { key: 'A', cls: '', label: 'A — Mars 企业运营台' },
+      { key: 'B', cls: 'variant-b', label: 'B — 内容运营中心' },
+      { key: 'C', cls: 'variant-c', label: 'C — 深色指挥中心' }
+    ];
+    const params = new URLSearchParams(location.search);
+    let index = Math.max(0, variants.findIndex(v => v.key.toLowerCase() === (params.get('variant') || 'a').toLowerCase()));
+    function apply() {
+      document.body.className = [variants[index].cls, params.get('capture') === '1' ? 'capture' : ''].filter(Boolean).join(' ');
+      document.getElementById('variantLabel').textContent = variants[index].label;
+      const url = new URL(location.href);
+      url.searchParams.set('variant', variants[index].key);
+      history.replaceState(null, '', url);
+    }
+    function cycle(delta) { index = (index + delta + variants.length) % variants.length; apply(); }
+    document.getElementById('prev').onclick = () => cycle(-1);
+    document.getElementById('next').onclick = () => cycle(1);
+    addEventListener('keydown', (event) => {
+      if (['INPUT','TEXTAREA'].includes(document.activeElement.tagName) || document.activeElement.isContentEditable) return;
+      if (event.key === 'ArrowLeft') cycle(-1);
+      if (event.key === 'ArrowRight') cycle(1);
+    });
+    apply();
+  </script>
+</body>
+</html>

@@ -2,17 +2,21 @@ import os
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, UploadFile, File, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session
 
-from app.database import Base, engine, get_db, initialize_database
+from app.database import get_db, initialize_database
+from app.game_catalog import DuplicateGameSlug, EnabledServiceLimitReached, GameCatalog, GameCatalogError, GameNotFound, InvalidCatalogAction, ServiceNotFound
 from app.models import AdminUser, Game, GameService, SiteSetting
 from app.schemas import AdminPublic, DashboardPublic, GamePublic, GameWrite, LoginRequest, ReorderItem, ServicePublic, ServiceWrite, SiteSettingPublic, SiteSettingWrite
 from app.security import COOKIE_NAME, create_token, get_current_admin, password_hash
-from app.errors import api_error
+from app.errors import api_error, http_error_handler, validation_error_handler
 
 app = FastAPI(title="11号电竞 API")
+app.add_exception_handler(HTTPException, http_error_handler)
+app.add_exception_handler(RequestValidationError, validation_error_handler)
 Path("uploads/games").mkdir(parents=True, exist_ok=True)
 Path("uploads/studio").mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
@@ -25,16 +29,7 @@ def startup() -> None:
 
 @app.get("/api/games", response_model=list[GamePublic])
 def list_public_games(db: Session = Depends(get_db)) -> list[Game]:
-    statement = (
-        select(Game)
-        .where(Game.is_active.is_(True))
-        .options(selectinload(Game.services))
-        .order_by(Game.sort_order, Game.id)
-    )
-    games = list(db.scalars(statement).unique())
-    for game in games:
-        game.services = sorted((service for service in game.services if service.is_active), key=lambda service: (service.sort_order, service.id))
-    return games
+    return GameCatalog(db).list_public_games()
 
 
 @app.get("/api/settings", response_model=SiteSettingPublic)
@@ -77,134 +72,125 @@ def me(request: Request, db: Session = Depends(get_db)) -> AdminUser:
 @app.get("/api/admin/dashboard", response_model=DashboardPublic)
 def dashboard(request: Request, db: Session = Depends(get_db)) -> DashboardPublic:
     get_current_admin(request, db)
-    games = list(db.scalars(select(Game)))
-    services = list(db.scalars(select(GameService)))
-    latest = max((item.updated_at for item in [*games, *services]), default=None)
-    return DashboardPublic(game_count=len(games), active_game_count=sum(game.is_active for game in games), service_count=len(services), active_service_count=sum(service.is_active for service in services), latest_updated_at=latest.isoformat() if latest else None)
+    return DashboardPublic(**GameCatalog(db).dashboard_counts().__dict__)
 
 
 def require_admin(request: Request, db: Session) -> AdminUser:
     return get_current_admin(request, db)
 
 
+def catalog_http_error(error: GameCatalogError) -> HTTPException:
+    if isinstance(error, EnabledServiceLimitReached):
+        return HTTPException(
+            status_code=409,
+            detail={"code": "SERVICE_LIMIT_REACHED", "message": "每个游戏最多 5 个启用需求"},
+        )
+    if isinstance(error, DuplicateGameSlug):
+        return HTTPException(status_code=409, detail="slug 已存在")
+    if isinstance(error, GameNotFound):
+        return HTTPException(status_code=404, detail="游戏不存在")
+    if isinstance(error, ServiceNotFound):
+        return HTTPException(status_code=404, detail="服务不存在")
+    if isinstance(error, InvalidCatalogAction):
+        return HTTPException(status_code=422, detail="不支持的操作")
+    return HTTPException(status_code=400, detail="目录操作失败")
+
+
 @app.get("/api/admin/games", response_model=list[GamePublic])
 def admin_games(request: Request, db: Session = Depends(get_db)) -> list[Game]:
     require_admin(request, db)
-    return list(db.scalars(select(Game).options(selectinload(Game.services)).order_by(Game.sort_order, Game.id)).unique())
+    return GameCatalog(db).list_admin_games()
 
 
 @app.post("/api/admin/games", response_model=GamePublic, status_code=201)
 def create_game(payload: GameWrite, request: Request, db: Session = Depends(get_db)) -> Game:
     require_admin(request, db)
-    if db.scalar(select(Game).where(Game.slug == payload.slug)):
-        raise HTTPException(status_code=409, detail="slug 已存在")
-    game = Game(**payload.model_dump())
-    db.add(game)
-    db.commit()
-    db.refresh(game)
-    return game
-
-
-@app.patch("/api/admin/games/{game_id}", response_model=GamePublic)
-def update_game(game_id: int, payload: GameWrite, request: Request, db: Session = Depends(get_db)) -> Game:
-    require_admin(request, db)
-    game = db.get(Game, game_id)
-    if not game or not game.is_active:
-        raise HTTPException(status_code=404, detail="游戏不存在")
-    for key, value in payload.model_dump().items():
-        setattr(game, key, value)
-    db.commit()
-    db.refresh(game)
-    return game
+    try:
+        return GameCatalog(db).create_game(payload)
+    except GameCatalogError as exc:
+        raise catalog_http_error(exc) from exc
 
 
 @app.patch("/api/admin/games/reorder")
 def reorder_games(items: list[ReorderItem], request: Request, db: Session = Depends(get_db)) -> dict[str, bool]:
     require_admin(request, db)
-    games = {game.id: game for game in db.scalars(select(Game).where(Game.id.in_([item.id for item in items])))}
-    if len(games) != len(items):
-        raise HTTPException(status_code=404, detail="游戏不存在")
-    for item in items:
-        games[item.id].sort_order = item.sort_order
-    db.commit()
-    return {"ok": True}
+    try:
+        return GameCatalog(db).reorder_games(items)
+    except GameCatalogError as exc:
+        raise catalog_http_error(exc) from exc
+
+
+@app.patch("/api/admin/games/{game_id}", response_model=GamePublic)
+def update_game(game_id: int, payload: GameWrite, request: Request, db: Session = Depends(get_db)) -> Game:
+    require_admin(request, db)
+    try:
+        return GameCatalog(db).update_game(game_id, payload)
+    except GameCatalogError as exc:
+        raise catalog_http_error(exc) from exc
 
 
 @app.post("/api/admin/games/{game_id}/state/{action}", response_model=GamePublic)
 def set_game_state(game_id: int, action: str, request: Request, db: Session = Depends(get_db)) -> Game:
     require_admin(request, db)
-    game = db.get(Game, game_id)
-    if not game or action not in {"enable", "disable"}:
-        raise HTTPException(status_code=404, detail="游戏不存在")
-    game.is_active = action == "enable"
-    db.commit()
-    db.refresh(game)
-    return game
+    if action not in {"enable", "disable"}:
+        raise catalog_http_error(InvalidCatalogAction())
+    try:
+        return GameCatalog(db).set_game_enabled(game_id, action == "enable")
+    except GameCatalogError as exc:
+        raise catalog_http_error(exc) from exc
 
 
 @app.post("/api/admin/games/{game_id}/services", response_model=ServicePublic, status_code=201)
 def create_service(game_id: int, payload: ServiceWrite, request: Request, db: Session = Depends(get_db)) -> GameService:
     require_admin(request, db)
-    game = db.get(Game, game_id)
-    if not game:
-        raise HTTPException(status_code=404, detail="游戏不存在")
-    game.services.append(GameService(**payload.model_dump()))
-    db.commit()
-    db.refresh(game)
-    db.refresh(game)
-    return game.services[-1]
+    try:
+        return GameCatalog(db).create_service(game_id, payload)
+    except GameCatalogError as exc:
+        raise catalog_http_error(exc) from exc
 
 
 @app.patch("/api/admin/services/{service_id}", response_model=ServicePublic)
 def update_service(service_id: int, payload: ServiceWrite, request: Request, db: Session = Depends(get_db)) -> GameService:
     require_admin(request, db)
-    service = db.get(GameService, service_id)
-    if not service:
-        raise HTTPException(status_code=404, detail="服务不存在")
-    for key, value in payload.model_dump().items():
-        setattr(service, key, value)
-    db.commit()
-    db.refresh(service)
-    return service
+    try:
+        return GameCatalog(db).update_service(service_id, payload)
+    except GameCatalogError as exc:
+        raise catalog_http_error(exc) from exc
 
 
 @app.post("/api/admin/services/{service_id}/{action}", response_model=ServicePublic)
 def set_service_state(service_id: int, action: str, request: Request, db: Session = Depends(get_db)) -> GameService:
     require_admin(request, db)
-    service = db.get(GameService, service_id)
-    if not service or action not in {"enable", "disable"}:
-        raise HTTPException(status_code=404, detail="服务不存在")
-    service.is_active = action == "enable"
-    db.commit()
-    db.refresh(service)
-    return service
+    if action not in {"enable", "disable"}:
+        raise catalog_http_error(InvalidCatalogAction())
+    try:
+        return GameCatalog(db).set_service_enabled(service_id, action == "enable")
+    except GameCatalogError as exc:
+        raise catalog_http_error(exc) from exc
 
 
 @app.patch("/api/admin/games/{game_id}/services/reorder")
 def reorder_services(game_id: int, items: list[ReorderItem], request: Request, db: Session = Depends(get_db)) -> dict[str, bool]:
     require_admin(request, db)
-    services = {service.id: service for service in db.scalars(select(GameService).where(GameService.game_id == game_id, GameService.id.in_([item.id for item in items])))}
-    if len(services) != len(items):
-        raise HTTPException(status_code=404, detail="服务不存在")
-    for item in items:
-        services[item.id].sort_order = item.sort_order
-    db.commit()
-    return {"ok": True}
+    try:
+        return GameCatalog(db).reorder_services(game_id, items)
+    except GameCatalogError as exc:
+        raise catalog_http_error(exc) from exc
 
 
 @app.post("/api/admin/uploads/game-cover")
 def upload_game_cover(request: Request, file: UploadFile = File(...), db: Session = Depends(get_db)) -> dict[str, str]:
     require_admin(request, db)
     allowed = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
-    if file.content_type not in allowed:
-        raise HTTPException(status_code=422, detail="不支持的图片类型")
+    extension = Path(file.filename or "").suffix.lower()
+    if file.content_type not in allowed or extension not in {".jpg", ".jpeg", ".png", ".webp"}:
+        raise HTTPException(status_code=422, detail={"code": "UPLOAD_INVALID_TYPE", "message": "不支持的图片类型"})
     data = file.file.read(5 * 1024 * 1024 + 1)
     if len(data) > 5 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="图片不能超过 5MB")
-    if not data.startswith((b"\xff\xd8\xff", b"\x89PNG\r\n\x1a\n", b"RIFF")):
-        raise HTTPException(status_code=422, detail="图片内容无效")
+        raise HTTPException(status_code=413, detail={"code": "UPLOAD_TOO_LARGE", "message": "图片不能超过 5MB"})
+    if not data.startswith((b"\xff\xd8\xff", b"\x89PNG\r\n\x1a\n")) and not (data.startswith(b"RIFF") and data[8:12] == b"WEBP"):
+        raise HTTPException(status_code=422, detail={"code": "UPLOAD_INVALID_CONTENT", "message": "图片内容无效"})
     import secrets
-    from pathlib import Path
 
     directory = Path("uploads/games")
     directory.mkdir(parents=True, exist_ok=True)
@@ -217,15 +203,15 @@ def upload_game_cover(request: Request, file: UploadFile = File(...), db: Sessio
 def upload_studio_image(request: Request, file: UploadFile = File(...), db: Session = Depends(get_db)) -> dict[str, str]:
     require_admin(request, db)
     allowed = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
-    if file.content_type not in allowed:
-        raise HTTPException(status_code=422, detail="不支持的图片类型")
+    extension = Path(file.filename or "").suffix.lower()
+    if file.content_type not in allowed or extension not in {".jpg", ".jpeg", ".png", ".webp"}:
+        raise HTTPException(status_code=422, detail={"code": "UPLOAD_INVALID_TYPE", "message": "不支持的图片类型"})
     data = file.file.read(5 * 1024 * 1024 + 1)
     if len(data) > 5 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="图片不能超过 5MB")
-    if not data.startswith((b"\xff\xd8\xff", b"\x89PNG\r\n\x1a\n", b"RIFF")):
-        raise HTTPException(status_code=422, detail="图片内容无效")
+        raise HTTPException(status_code=413, detail={"code": "UPLOAD_TOO_LARGE", "message": "图片不能超过 5MB"})
+    if not data.startswith((b"\xff\xd8\xff", b"\x89PNG\r\n\x1a\n")) and not (data.startswith(b"RIFF") and data[8:12] == b"WEBP"):
+        raise HTTPException(status_code=422, detail={"code": "UPLOAD_INVALID_CONTENT", "message": "图片内容无效"})
     import secrets
-    from pathlib import Path
 
     directory = Path("uploads/studio")
     directory.mkdir(parents=True, exist_ok=True)
