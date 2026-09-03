@@ -54,21 +54,6 @@ class GameCatalog:
     def __init__(self, db: Session):
         self.db = db
 
-    def list_public_games(self) -> list[Game]:
-        games = list(
-            self.db.scalars(
-                select(Game)
-                .where(Game.is_active.is_(True))
-                .options(selectinload(Game.services).selectinload(GameService.items))
-                .order_by(Game.sort_order, Game.id)
-            ).unique()
-        )
-        for game in games:
-            game.services = self._sort_services(service for service in game.services if service.is_active)
-            for service in game.services:
-                service.items = self._sort_service_items(item for item in service.items if item.is_active)
-        return games
-
     def list_admin_games(self) -> list[Game]:
         games = list(
             self.db.scalars(

@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db, initialize_database
 from app.game_catalog import DuplicateGameSlug, EnabledServiceItemLimitReached, EnabledServiceLimitReached, GameCatalog, GameCatalogError, GameNotFound, InvalidCatalogAction, ServiceItemNotFound, ServiceNotFound
 from app.models import AdminUser, Game, GameService, ServiceItem, SiteSetting
+from app.public_game_catalog import PublicGameCatalog
 from app.schemas import AdminPublic, DashboardPublic, GamePublic, GameWrite, LoginRequest, ReorderItem, ServiceItemPublic, ServiceItemWrite, ServicePublic, ServiceWrite, SiteSettingPublic, SiteSettingWrite
 from app.security import COOKIE_NAME, create_token, get_current_admin, password_hash
 from app.errors import api_error, http_error_handler, validation_error_handler
@@ -28,8 +29,8 @@ def startup() -> None:
 
 
 @app.get("/api/games", response_model=list[GamePublic])
-def list_public_games(db: Session = Depends(get_db)) -> list[Game]:
-    return GameCatalog(db).list_public_games()
+def list_public_games(db: Session = Depends(get_db)) -> list[GamePublic]:
+    return PublicGameCatalog(db).list_games()
 
 
 @app.get("/api/settings", response_model=SiteSettingPublic)

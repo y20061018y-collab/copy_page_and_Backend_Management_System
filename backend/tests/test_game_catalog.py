@@ -5,7 +5,8 @@ from sqlalchemy.pool import StaticPool
 
 from app.database import Base
 from app.game_catalog import DuplicateGameSlug, EnabledServiceLimitReached, GameCatalog
-from app.models import Game, GameService
+from app.models import Game, GameService, ServiceItem
+from app.public_game_catalog import PublicGameCatalog
 from app.schemas import GameWrite, ReorderItem, ServiceWrite
 
 
@@ -38,10 +39,15 @@ def seed_catalog(db: Session) -> None:
         sort_order=2,
         is_active=True,
     )
+    first_service = GameService(name="第一服务", description="第一", sort_order=0, is_active=True)
+    first_service.items = [
+        ServiceItem(name="隐藏子项目", price="¥ 20", sort_order=1, is_active=False),
+        ServiceItem(name="第一子项目", price="¥ 10", sort_order=0, is_active=True),
+    ]
     active.services = [
         GameService(name="第二服务", description="第二", sort_order=2, is_active=True),
         GameService(name="隐藏服务", description="隐藏", sort_order=1, is_active=False),
-        GameService(name="第一服务", description="第一", sort_order=0, is_active=True),
+        first_service,
     ]
     disabled = Game(
         name="测试游戏",
@@ -75,10 +81,17 @@ def game_write(game: Game, **overrides) -> GameWrite:
 
 
 def test_public_games_hide_disabled_games_and_services(db: Session):
-    games = GameCatalog(db).list_public_games()
+    game = db.query(Game).filter_by(slug="genshin").one()
+    original_services = list(game.services)
+    original_items = list(original_services[2].items)
+
+    games = PublicGameCatalog(db).list_games()
 
     assert [game.slug for game in games] == ["genshin"]
     assert [service.name for service in games[0].services] == ["第一服务", "第二服务"]
+    assert [item.name for item in games[0].services[0].items] == ["第一子项目"]
+    assert game.services == original_services
+    assert original_services[2].items == original_items
 
 
 def test_admin_games_include_disabled_games_and_sort_services(db: Session):
