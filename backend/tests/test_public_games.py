@@ -8,7 +8,7 @@ def test_public_games_returns_seeded_enabled_games_in_order(client):
     games = response.json()
     assert [game["slug"] for game in games] == ["genshin", "star-rail", "zenless-zone-zero", "wuthering-waves"]
     assert all(game["is_active"] for game in games)
-    assert games[0]["services"][0]["price"] == "¥ 30"
+    assert "price" not in games[0]["services"][0]
     assert games[0]["services"][0]["cover_image"] == games[0]["cover_image"]
 
 
@@ -20,7 +20,7 @@ def test_admin_can_set_a_service_cover_without_changing_the_game_cover(client):
     updated = client.patch(
         f"/api/admin/services/{service['id']}",
         json={
-            "name": service["name"], "price": service["price"], "description": service["description"],
+            "name": service["name"], "description": service["description"],
             "cover_image": "/uploads/games/custom-service-cover.jpg", "sort_order": service["sort_order"], "is_active": service["is_active"],
         },
     )
@@ -62,6 +62,27 @@ def test_admin_can_manage_child_projects_for_one_service(client):
     assert [child["name"] for child in refreshed_service["items"]][-1] == "新增子项目"
 
 
+def test_admin_can_save_all_edited_child_project_fields_in_one_request(client):
+    client.post("/api/auth/login", json={"username": "admin", "password": "admin-password"})
+    item = client.get("/api/admin/games").json()[0]["services"][0]["items"][0]
+
+    updated = client.patch(
+        f"/api/admin/service-items/{item['id']}",
+        json={
+            "name": "已更新名称",
+            "price": "¥ 199",
+            "description": "已更新说明",
+            "sort_order": item["sort_order"],
+            "is_active": item["is_active"],
+        },
+    )
+
+    assert updated.status_code == 200
+    assert updated.json()["name"] == "已更新名称"
+    assert updated.json()["price"] == "¥ 199"
+    assert updated.json()["description"] == "已更新说明"
+
+
 def test_public_settings_returns_contact_fields(client):
     response = client.get("/api/settings")
 
@@ -84,7 +105,7 @@ def test_admin_login_sets_cookie_and_dashboard_requires_authentication(client):
 def test_admin_can_create_game_and_service_then_disable_service(client):
     client.post("/api/auth/login", json={"username": "admin", "password": "admin-password"})
     game = client.post("/api/admin/games", json={"name": "测试游戏", "slug": "test-game", "tag": "测试", "description": "测试简介", "cover_image": "/images/games/原神.jpg", "accent_color": "#111111", "accent_color_2": "#222222", "sort_order": 99, "is_active": True})
-    service = client.post(f"/api/admin/games/{game.json()['id']}/services", json={"name": "测试服务", "price": "¥ 10", "description": "说明", "sort_order": 0, "is_active": True})
+    service = client.post(f"/api/admin/games/{game.json()['id']}/services", json={"name": "测试服务", "description": "说明", "sort_order": 0, "is_active": True})
     disabled = client.post(f"/api/admin/services/{service.json()['id']}/disable")
     public = client.get("/api/games")
 
@@ -101,7 +122,7 @@ def test_admin_receives_conflict_for_a_sixth_enabled_service(client):
 
     response = client.post(
         f"/api/admin/games/{game['id']}/services",
-        json={"name": "第六项", "price": "¥ 1", "description": "测试", "sort_order": 99, "is_active": True},
+        json={"name": "第六项", "description": "测试", "sort_order": 99, "is_active": True},
     )
 
     assert response.status_code == 409
@@ -113,12 +134,12 @@ def test_admin_receives_conflict_when_update_enables_a_sixth_service(client):
     game = client.get("/api/admin/games").json()[0]
     disabled = client.post(
         f"/api/admin/games/{game['id']}/services",
-        json={"name": "禁用需求", "price": "¥ 1", "description": "测试", "sort_order": 12, "is_active": False},
+        json={"name": "禁用需求", "description": "测试", "sort_order": 12, "is_active": False},
     ).json()
 
     response = client.patch(
         f"/api/admin/services/{disabled['id']}",
-        json={"name": "禁用需求", "price": "¥ 1", "description": "测试", "sort_order": 12, "is_active": True},
+        json={"name": "禁用需求", "description": "测试", "sort_order": 12, "is_active": True},
     )
 
     assert response.status_code == 409
@@ -130,7 +151,7 @@ def test_admin_receives_conflict_when_enabling_a_sixth_service(client):
     game = client.get("/api/admin/games").json()[0]
     disabled = client.post(
         f"/api/admin/games/{game['id']}/services",
-        json={"name": "禁用需求", "price": "¥ 1", "description": "测试", "sort_order": 12, "is_active": False},
+        json={"name": "禁用需求", "description": "测试", "sort_order": 12, "is_active": False},
     ).json()
 
     response = client.post(f"/api/admin/services/{disabled['id']}/enable")

@@ -14,7 +14,7 @@ def migration_revisions(versions_dir: Path) -> dict[str, str | tuple[str, ...] |
     return revisions
 
 
-def test_migration_history_has_a_single_head_after_the_legacy_cover_image_migration():
+def test_migration_history_has_a_single_head_after_removing_service_prices():
     backend_dir = Path(__file__).parents[1]
     legacy_migration = backend_dir / "alembic" / "versions" / "0004_add_service_cover_images.py"
     revisions = migration_revisions(backend_dir / "alembic" / "versions")
@@ -30,4 +30,5 @@ def test_migration_history_has_a_single_head_after_the_legacy_cover_image_migrat
         "0004_add_service_cover_images",
         "0004_service_items",
     )
-    assert set(revisions) - referenced_revisions == {"0005_service_cover_images"}
+    assert revisions["0006_remove_service_prices"] == "0005_service_cover_images"
+    assert set(revisions) - referenced_revisions == {"0006_remove_service_prices"}

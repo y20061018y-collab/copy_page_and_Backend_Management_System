@@ -6,7 +6,6 @@ import styles from "./public-home.module.css";
 export type Service = {
   id: number;
   name: string;
-  price: string;
   description: string;
   cover_image?: string;
   items: ServiceItem[];

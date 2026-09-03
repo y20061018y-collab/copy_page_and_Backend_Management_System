@@ -15,7 +15,6 @@ class ServicePublic(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     name: str
-    price: str
     description: str
     cover_image: str
     sort_order: int
@@ -81,7 +80,6 @@ class GameWrite(BaseModel):
 
 class ServiceWrite(BaseModel):
     name: str
-    price: str
     description: str = ""
     cover_image: str | None = None
     sort_order: int = 0

@@ -81,7 +81,7 @@ describe("public game cards", () => {
       cover_image: "/api-game-cover.png",
       accent_color: "#123456",
       accent_color_2: "#654321",
-      services: [{ id: 41, name: "定制开荒", price: "¥ 66", description: "根据存档制定路线", cover_image: "/custom-service-cover.png", items: [] }],
+      services: [{ id: 41, name: "定制开荒", description: "根据存档制定路线", cover_image: "/custom-service-cover.png", items: [] }],
     };
 
     const html = renderToStaticMarkup(

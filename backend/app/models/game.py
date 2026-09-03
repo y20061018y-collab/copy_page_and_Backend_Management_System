@@ -30,7 +30,6 @@ class GameService(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     game_id: Mapped[int] = mapped_column(ForeignKey("games.id", ondelete="CASCADE"), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
-    price: Mapped[str] = mapped_column(String(80), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
     cover_image: Mapped[str] = mapped_column(String(255), nullable=False, default="", server_default="")
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

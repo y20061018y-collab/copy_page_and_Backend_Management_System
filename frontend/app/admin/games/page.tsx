@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { AdminLayout, AdminPageTitle } from "../../../components/admin-layout";
 
-type Game = { id: number; name: string; slug: string; tag: string; description: string; cover_image: string; is_active: boolean; sort_order: number; services: { id: number; name: string; price: string; is_active: boolean }[] };
+type Game = { id: number; name: string; slug: string; tag: string; description: string; cover_image: string; is_active: boolean; sort_order: number; services: { id: number; name: string; is_active: boolean }[] };
 
 export default function AdminGames() {
   const [games, setGames] = useState<Game[]>([]);

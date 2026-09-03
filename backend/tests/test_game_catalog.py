@@ -39,9 +39,9 @@ def seed_catalog(db: Session) -> None:
         is_active=True,
     )
     active.services = [
-        GameService(name="第二服务", price="¥ 20", description="第二", sort_order=2, is_active=True),
-        GameService(name="隐藏服务", price="¥ 99", description="隐藏", sort_order=1, is_active=False),
-        GameService(name="第一服务", price="¥ 10", description="第一", sort_order=0, is_active=True),
+        GameService(name="第二服务", description="第二", sort_order=2, is_active=True),
+        GameService(name="隐藏服务", description="隐藏", sort_order=1, is_active=False),
+        GameService(name="第一服务", description="第一", sort_order=0, is_active=True),
     ]
     disabled = Game(
         name="测试游戏",
@@ -133,7 +133,7 @@ def test_create_service_commits_and_returns_service(db: Session):
     game = db.query(Game).filter_by(slug="genshin").one()
     service = GameCatalog(db).create_service(
         game.id,
-        ServiceWrite(name="新增服务", price="面议", description="新增描述", sort_order=3, is_active=True),
+        ServiceWrite(name="新增服务", description="新增描述", sort_order=3, is_active=True),
     )
 
     assert service.id is not None
@@ -146,13 +146,13 @@ def test_create_service_rejects_a_sixth_enabled_service(db: Session):
     for index in range(3):
         catalog.create_service(
             game.id,
-            ServiceWrite(name=f"补充需求 {index}", price="¥ 1", description="测试", sort_order=10 + index, is_active=True),
+            ServiceWrite(name=f"补充需求 {index}", description="测试", sort_order=10 + index, is_active=True),
         )
 
     with pytest.raises(EnabledServiceLimitReached):
         catalog.create_service(
             game.id,
-            ServiceWrite(name="第六项", price="¥ 1", description="测试", sort_order=99, is_active=True),
+            ServiceWrite(name="第六项", description="测试", sort_order=99, is_active=True),
         )
 
 
@@ -162,14 +162,14 @@ def test_update_service_rejects_enabling_a_sixth_service(db: Session):
     for index in range(4):
         catalog.create_service(
             game.id,
-            ServiceWrite(name=f"补充需求 {index}", price="¥ 1", description="测试", sort_order=10 + index, is_active=index < 3),
+            ServiceWrite(name=f"补充需求 {index}", description="测试", sort_order=10 + index, is_active=index < 3),
         )
     disabled_service = next(service for service in game.services if service.name == "补充需求 3")
 
     with pytest.raises(EnabledServiceLimitReached):
         catalog.update_service(
             disabled_service.id,
-            ServiceWrite(name="补充需求 3", price="¥ 1", description="测试", sort_order=13, is_active=True),
+            ServiceWrite(name="补充需求 3", description="测试", sort_order=13, is_active=True),
         )
 
 
@@ -179,7 +179,7 @@ def test_set_service_enabled_rejects_a_sixth_service(db: Session):
     for index in range(4):
         catalog.create_service(
             game.id,
-            ServiceWrite(name=f"补充需求 {index}", price="¥ 1", description="测试", sort_order=10 + index, is_active=index < 3),
+            ServiceWrite(name=f"补充需求 {index}", description="测试", sort_order=10 + index, is_active=index < 3),
         )
     disabled_service = next(service for service in game.services if service.name == "补充需求 3")
 

@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, select, text
 from sqlalchemy.orm import Session
 
 from app.database import Base
@@ -22,6 +22,7 @@ def test_backfill_adds_only_missing_defaults_without_overwriting_edits_or_exceed
     Base.metadata.create_all(engine)
 
     with Session(engine) as session:
+        session.execute(text("ALTER TABLE game_services ADD COLUMN price VARCHAR(80) NOT NULL DEFAULT ''"))
         genshin = Game(
             name="原神", slug="genshin", tag="测试", description="测试", cover_image="/test.jpg",
             accent_color="#111111", accent_color_2="#222222", sort_order=0, is_active=True,
@@ -31,13 +32,13 @@ def test_backfill_adds_only_missing_defaults_without_overwriting_edits_or_exceed
             accent_color="#111111", accent_color_2="#222222", sort_order=1, is_active=True,
         )
         genshin.services = [
-            GameService(name="日常委托", price="¥ 30", description="默认", sort_order=0, is_active=True),
-            GameService(name="深渊满星", price="¥ 88", description="默认", sort_order=1, is_active=True),
-            GameService(name="角色培养", price="¥ 120", description="默认", sort_order=2, is_active=True),
-            GameService(name="提瓦特探索", price="¥ 999", description="管理员编辑", sort_order=3, is_active=True),
+            GameService(name="日常委托", description="默认", sort_order=0, is_active=True),
+            GameService(name="深渊满星", description="默认", sort_order=1, is_active=True),
+            GameService(name="角色培养", description="默认", sort_order=2, is_active=True),
+            GameService(name="提瓦特探索", description="管理员编辑", sort_order=3, is_active=True),
         ]
         capped.services = [
-            GameService(name=f"自定义服务 {index}", price="¥ 1", description="管理员添加", sort_order=index, is_active=True)
+            GameService(name=f"自定义服务 {index}", description="管理员添加", sort_order=index, is_active=True)
             for index in range(5)
         ]
         session.add_all([genshin, capped])
@@ -54,5 +55,5 @@ def test_backfill_adds_only_missing_defaults_without_overwriting_edits_or_exceed
     assert len(genshin_services) == 5
     assert sum(service.name == "养成目标" for service in genshin_services) == 1
     edited_service = next(service for service in genshin_services if service.name == "提瓦特探索")
-    assert (edited_service.price, edited_service.description) == ("¥ 999", "管理员编辑")
+    assert edited_service.description == "管理员编辑"
     assert len(capped_services) == 5
