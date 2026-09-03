@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import React, { useEffect, useMemo, useState, type CSSProperties } from "react";
 import styles from "./public-home.module.css";
 
 export type Service = {
@@ -60,8 +60,6 @@ export default function PublicHome({ games, settings }: { games: Game[]; setting
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [showContact, setShowContact] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
-  const [isMobile, setIsMobile] = useState(false);
-  const demandsRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     setSelectedGameSlug((current) => {
@@ -80,14 +78,6 @@ export default function PublicHome({ games, settings }: { games: Game[]; setting
 
     window.addEventListener("keydown", close);
     return () => window.removeEventListener("keydown", close);
-  }, []);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(max-width: 800px)");
-    const update = () => setIsMobile(mediaQuery.matches);
-    update();
-    mediaQuery.addEventListener("change", update);
-    return () => mediaQuery.removeEventListener("change", update);
   }, []);
 
   const selectedGame = useMemo(
@@ -124,9 +114,6 @@ export default function PublicHome({ games, settings }: { games: Game[]; setting
 
   const handleGameSelect = (slug: string) => {
     setSelectedGameSlug(slug);
-    if (isMobile) {
-      demandsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
   };
 
   if (!selectedGame) {
@@ -166,7 +153,7 @@ export default function PublicHome({ games, settings }: { games: Game[]; setting
         </div>
       </section>
 
-      <section className={styles.workspace} id="games">
+      <section className={styles.workspace}>
         <aside>
           <div className={styles.sectionIntro}>
             <h2>选择你的游戏</h2>
@@ -197,7 +184,7 @@ export default function PublicHome({ games, settings }: { games: Game[]; setting
           </div>
         </aside>
 
-        <section ref={demandsRef} className={styles.demands} aria-live="polite">
+        <section className={styles.demands} aria-live="polite">
           <div className={styles.demandTitle}>
             <div>
               <p>需求</p>

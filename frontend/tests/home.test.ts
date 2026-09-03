@@ -25,6 +25,14 @@ describe("public game cards", () => {
     expect(css).toMatch(/\.demandCard i\s*\{[^}]*font-size:\s*(?:1[2-9]|[2-9]\d)px;/);
   });
 
+  it("keeps the game and demand panels side by side at every viewport width", () => {
+    const css = readFileSync(resolve(process.cwd(), "components/public-home.module.css"), "utf8");
+    const source = readFileSync(resolve(process.cwd(), "components/public-home.tsx"), "utf8");
+
+    expect(css).not.toMatch(/@media \(max-width: 800px\)\s*\{[\s\S]*?\.workspace\s*\{\s*grid-template-columns:\s*1fr;/);
+    expect(source).not.toMatch(/matchMedia|scrollIntoView|demandsRef|isMobile|id="games"/);
+  });
+
   it("limits public demand cards to five enabled services", () => {
     const services = Array.from({ length: 6 }, (_, index) => ({
       id: index + 1,
@@ -189,7 +197,7 @@ describe("public game cards", () => {
     expect(sourcePositions).toHaveLength(3);
     expect(sourcePositions[0]).toBeLessThan(html.indexOf("</header>"));
     expect(sourcePositions[1]).toBeGreaterThan(html.indexOf('aria-hidden="true"'));
-    expect(sourcePositions[1]).toBeLessThan(html.indexOf('id="games"'));
+    expect(sourcePositions[1]).toBeLessThan(html.indexOf("<footer"));
     expect(sourcePositions[2]).toBeGreaterThan(html.indexOf("<footer"));
   });
 
