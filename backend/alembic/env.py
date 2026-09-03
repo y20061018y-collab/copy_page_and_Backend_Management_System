@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.database import Base
-from app.models import Game, GameService, SiteSetting
+from app.models import Game, GameService, ServiceItem, SiteSetting
 
 target_metadata = Base.metadata
 database_url = os.getenv("DATABASE_URL")

@@ -8,9 +8,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db, initialize_database
-from app.game_catalog import DuplicateGameSlug, EnabledServiceLimitReached, GameCatalog, GameCatalogError, GameNotFound, InvalidCatalogAction, ServiceNotFound
-from app.models import AdminUser, Game, GameService, SiteSetting
-from app.schemas import AdminPublic, DashboardPublic, GamePublic, GameWrite, LoginRequest, ReorderItem, ServicePublic, ServiceWrite, SiteSettingPublic, SiteSettingWrite
+from app.game_catalog import DuplicateGameSlug, EnabledServiceItemLimitReached, EnabledServiceLimitReached, GameCatalog, GameCatalogError, GameNotFound, InvalidCatalogAction, ServiceItemNotFound, ServiceNotFound
+from app.models import AdminUser, Game, GameService, ServiceItem, SiteSetting
+from app.schemas import AdminPublic, DashboardPublic, GamePublic, GameWrite, LoginRequest, ReorderItem, ServiceItemPublic, ServiceItemWrite, ServicePublic, ServiceWrite, SiteSettingPublic, SiteSettingWrite
 from app.security import COOKIE_NAME, create_token, get_current_admin, password_hash
 from app.errors import api_error, http_error_handler, validation_error_handler
 
@@ -85,12 +85,19 @@ def catalog_http_error(error: GameCatalogError) -> HTTPException:
             status_code=409,
             detail={"code": "SERVICE_LIMIT_REACHED", "message": "每个游戏最多 5 个启用需求"},
         )
+    if isinstance(error, EnabledServiceItemLimitReached):
+        return HTTPException(
+            status_code=409,
+            detail={"code": "SERVICE_ITEM_LIMIT_REACHED", "message": "每个服务最多 5 个启用子项目"},
+        )
     if isinstance(error, DuplicateGameSlug):
         return HTTPException(status_code=409, detail="slug 已存在")
     if isinstance(error, GameNotFound):
         return HTTPException(status_code=404, detail="游戏不存在")
     if isinstance(error, ServiceNotFound):
         return HTTPException(status_code=404, detail="服务不存在")
+    if isinstance(error, ServiceItemNotFound):
+        return HTTPException(status_code=404, detail="服务子项目不存在")
     if isinstance(error, InvalidCatalogAction):
         return HTTPException(status_code=422, detail="不支持的操作")
     return HTTPException(status_code=400, detail="目录操作失败")
@@ -158,6 +165,15 @@ def update_service(service_id: int, payload: ServiceWrite, request: Request, db:
         raise catalog_http_error(exc) from exc
 
 
+@app.post("/api/admin/services/{service_id}/items", response_model=ServiceItemPublic, status_code=201)
+def create_service_item(service_id: int, payload: ServiceItemWrite, request: Request, db: Session = Depends(get_db)) -> ServiceItem:
+    require_admin(request, db)
+    try:
+        return GameCatalog(db).create_service_item(service_id, payload)
+    except GameCatalogError as exc:
+        raise catalog_http_error(exc) from exc
+
+
 @app.post("/api/admin/services/{service_id}/{action}", response_model=ServicePublic)
 def set_service_state(service_id: int, action: str, request: Request, db: Session = Depends(get_db)) -> GameService:
     require_admin(request, db)
@@ -178,23 +194,52 @@ def reorder_services(game_id: int, items: list[ReorderItem], request: Request, d
         raise catalog_http_error(exc) from exc
 
 
+@app.patch("/api/admin/service-items/{item_id}", response_model=ServiceItemPublic)
+def update_service_item(item_id: int, payload: ServiceItemWrite, request: Request, db: Session = Depends(get_db)) -> ServiceItem:
+    require_admin(request, db)
+    try:
+        return GameCatalog(db).update_service_item(item_id, payload)
+    except GameCatalogError as exc:
+        raise catalog_http_error(exc) from exc
+
+
+@app.post("/api/admin/service-items/{item_id}/{action}", response_model=ServiceItemPublic)
+def set_service_item_state(item_id: int, action: str, request: Request, db: Session = Depends(get_db)) -> ServiceItem:
+    require_admin(request, db)
+    if action not in {"enable", "disable"}:
+        raise catalog_http_error(InvalidCatalogAction())
+    try:
+        return GameCatalog(db).set_service_item_enabled(item_id, action == "enable")
+    except GameCatalogError as exc:
+        raise catalog_http_error(exc) from exc
+
+
+@app.patch("/api/admin/services/{service_id}/items/reorder")
+def reorder_service_items(service_id: int, items: list[ReorderItem], request: Request, db: Session = Depends(get_db)) -> dict[str, bool]:
+    require_admin(request, db)
+    try:
+        return GameCatalog(db).reorder_service_items(service_id, items)
+    except GameCatalogError as exc:
+        raise catalog_http_error(exc) from exc
+
+
 @app.post("/api/admin/uploads/game-cover")
 def upload_game_cover(request: Request, file: UploadFile = File(...), db: Session = Depends(get_db)) -> dict[str, str]:
     require_admin(request, db)
-    allowed = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
     extension = Path(file.filename or "").suffix.lower()
-    if file.content_type not in allowed or extension not in {".jpg", ".jpeg", ".png", ".webp"}:
+    if extension not in {".jpg", ".jpeg", ".png", ".webp"}:
         raise HTTPException(status_code=422, detail={"code": "UPLOAD_INVALID_TYPE", "message": "不支持的图片类型"})
     data = file.file.read(5 * 1024 * 1024 + 1)
     if len(data) > 5 * 1024 * 1024:
         raise HTTPException(status_code=413, detail={"code": "UPLOAD_TOO_LARGE", "message": "图片不能超过 5MB"})
-    if not data.startswith((b"\xff\xd8\xff", b"\x89PNG\r\n\x1a\n")) and not (data.startswith(b"RIFF") and data[8:12] == b"WEBP"):
+    detected_extension = ".jpg" if data.startswith(b"\xff\xd8\xff") else ".png" if data.startswith(b"\x89PNG\r\n\x1a\n") else ".webp" if data.startswith(b"RIFF") and data[8:12] == b"WEBP" else None
+    if detected_extension is None:
         raise HTTPException(status_code=422, detail={"code": "UPLOAD_INVALID_CONTENT", "message": "图片内容无效"})
     import secrets
 
     directory = Path("uploads/games")
     directory.mkdir(parents=True, exist_ok=True)
-    target = directory / f"{secrets.token_urlsafe(16)}{allowed[file.content_type]}"
+    target = directory / f"{secrets.token_urlsafe(16)}{detected_extension}"
     target.write_bytes(data)
     return {"path": f"/uploads/games/{target.name}"}
 

@@ -501,6 +501,13 @@
   padding: 28px;
 }
 
+.emptyItems {
+  margin: 0;
+  padding: 24px;
+  color: #9ba4bd;
+  text-align: center;
+}
+
 .priceRow {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 154px;

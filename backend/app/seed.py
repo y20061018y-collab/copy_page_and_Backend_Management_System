@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from app.models import Game, GameService, SiteSetting
+from app.models import Game, GameService, ServiceItem, SiteSetting
 
 
 SEED_GAMES = [
@@ -10,11 +10,33 @@ SEED_GAMES = [
     ("鸣潮", "wuthering-waves", "开放世界 · 动作冒险", "稳定可靠的鸣潮账号养成服务。", "/images/games/鸣潮.jpg", "#0891b2", "#8b5cf6", [("每日任务", "¥ 25"), ("无音区材料", "¥ 50"), ("角色培养", "¥ 120"), ("账号养成", "¥ 120"), ("动作冒险", "¥ 25")]),
 ]
 
+SEED_SERVICE_ITEMS = [
+    ("基础方案", "¥ 30", "完成基础目标与前置内容。"),
+    ("标准方案", "¥ 88", "按推荐路线完成主要内容。"),
+    ("进阶方案", "¥ 120", "包含高难目标与资源规划。"),
+    ("定制方案", "¥ 30", "根据账号进度安排执行内容。"),
+    ("专属方案", "¥ 120", "沟通后提供专属服务安排。"),
+]
+
 
 def seed_database(db: Session) -> None:
     for order, (name, slug, tag, description, cover, color, color2, services) in enumerate(SEED_GAMES):
         game = Game(name=name, slug=slug, tag=tag, description=description, cover_image=cover, accent_color=color, accent_color_2=color2, sort_order=order, is_active=True)
-        game.services = [GameService(name=service_name, price=price, description="按需求提供专业服务", sort_order=index, is_active=True) for index, (service_name, price) in enumerate(services)]
+        game.services = [
+            GameService(
+                name=service_name,
+                price=price,
+                description="按需求提供专业服务",
+                cover_image=cover,
+                sort_order=index,
+                is_active=True,
+                items=[
+                    ServiceItem(name=item_name, price=item_price, description=item_description, sort_order=item_index, is_active=True)
+                    for item_index, (item_name, item_price, item_description) in enumerate(SEED_SERVICE_ITEMS)
+                ],
+            )
+            for index, (service_name, price) in enumerate(services)
+        ]
         db.add(game)
     db.add(SiteSetting(id=1, site_name="11号电竞", site_subtitle="专业游戏服务工作室", studio_image="/images/studio.jpg", contact_description="欢迎联系我们咨询服务详情"))
     db.commit()

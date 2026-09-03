@@ -53,16 +53,16 @@ describe("public game cards", () => {
     expect(result[3]).toBe(services[3]);
   });
 
-  it("keeps modal services in API order and passes their fields through unchanged", () => {
-    const services = [
+  it("keeps a selected service's child projects in API order", () => {
+    const items = [
       { id: 1, name: "日常委托", price: "¥ 30", description: "完成每日委托" },
       { id: 2, name: "深渊满星", price: "¥ 88", description: "挑战深境螺旋" },
       { id: 3, name: "角色培养", price: "¥ 120", description: "规划角色资源" },
     ];
-    const result = modalRows(services);
+    const result = modalRows(items);
 
-    expect(result).toBe(services);
-    expect(result).toEqual(services);
+    expect(result).toBe(items);
+    expect(result).toEqual(items);
   });
 
   it("uses game API tag and description without known-slug overrides", () => {
@@ -81,19 +81,46 @@ describe("public game cards", () => {
       cover_image: "/api-game-cover.png",
       accent_color: "#123456",
       accent_color_2: "#654321",
-      services: [{ id: 41, name: "定制开荒", price: "¥ 66", description: "根据存档制定路线" }],
+      services: [{ id: 41, name: "定制开荒", price: "¥ 66", description: "根据存档制定路线", cover_image: "/custom-service-cover.png", items: [] }],
     };
 
     const html = renderToStaticMarkup(
       createElement(ServiceModal, {
         game,
         selectedService: game.services[0],
-        services: game.services,
         onClose: () => {},
       }),
     );
 
-    expect(html).toContain('src="/api-game-cover.png"');
+    expect(html).toContain('src="/custom-service-cover.png"');
+  });
+
+  it("renders only the clicked large project's child projects in the modal", () => {
+    const selectedService = {
+      id: 41,
+      name: "深渊挑战",
+      price: "¥ 88",
+      description: "外层大项目",
+      items: [{ id: 411, name: "12 层满星", price: "¥ 120", description: "完成深渊目标" }],
+    };
+    const game: Game = {
+      id: 9,
+      name: "测试游戏",
+      slug: "test-game",
+      tag: "测试",
+      description: "测试说明",
+      cover_image: "/test-game.jpg",
+      accent_color: "#123456",
+      accent_color_2: "#654321",
+      services: [selectedService, { id: 42, name: "不应出现的同级大项目", price: "¥ 30", description: "", items: [] }],
+    };
+
+    const html = renderToStaticMarkup(createElement(ServiceModal, { game, selectedService, onClose: () => {} }));
+
+    expect(html).toContain("12 层满星");
+    expect(html).not.toContain("不应出现的同级大项目");
+    expect(html).toContain("测试游戏 · 深渊挑战");
+    expect(html).not.toContain("子项目详情");
   });
 
   it("uses the bundled studio image for all public brand nodes when no image is configured", () => {
@@ -168,9 +195,9 @@ describe("public game cards", () => {
 
   it("renders supplied game, settings, and ordered service API values", () => {
     const services = [
-      { id: 41, name: "定制开荒", price: "¥ 66", description: "根据存档制定路线" },
-      { id: 12, name: "高难挑战", price: "¥ 99", description: "完成限定挑战目标" },
-      { id: 88, name: "资源规划", price: "¥ 45", description: "优化养成资源分配" },
+      { id: 41, name: "定制开荒", price: "¥ 66", description: "根据存档制定路线", items: [{ id: 411, name: "基础开荒", price: "¥ 30", description: "完成基础任务" }] },
+      { id: 12, name: "高难挑战", price: "¥ 99", description: "完成限定挑战目标", items: [] },
+      { id: 88, name: "资源规划", price: "¥ 45", description: "优化养成资源分配", items: [] },
     ];
     const games: Game[] = [
       {

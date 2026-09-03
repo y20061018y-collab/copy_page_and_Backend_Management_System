@@ -1,0 +1,359 @@
+<!doctype html>
+<!--
+  THROWAWAY PROTOTYPE — Daily commission service details.
+  Question: Does a mobile bottom sheet make the five sub-service prices easy to scan?
+  Scope: standalone mock data only. It does not use the app's route, API, or production components.
+-->
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>日常委托服务明细 · 静态原型</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --page: #0f1420;
+        --surface: #151d2e;
+        --surface-raised: #1a2539;
+        --line: rgba(158, 184, 222, 0.15);
+        --muted: #8f9db3;
+        --text: #f1f6ff;
+        --cyan: #00d4d4;
+        --cyan-soft: rgba(0, 212, 212, 0.13);
+        --violet: #9b8cff;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        min-width: 320px;
+        min-height: 100vh;
+        margin: 0;
+        overflow-x: hidden;
+        color: var(--text);
+        font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+        background:
+          radial-gradient(circle at 85% -5%, rgba(100, 80, 205, 0.22), transparent 27rem),
+          radial-gradient(circle at 5% 45%, rgba(0, 212, 212, 0.08), transparent 22rem),
+          var(--page);
+      }
+
+      .page {
+        width: min(100%, 480px);
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: max(24px, env(safe-area-inset-top)) 20px calc(42px + env(safe-area-inset-bottom));
+      }
+
+      .prototype-note {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        margin-bottom: 28px;
+        color: #a6b5cf;
+        font-size: 11px;
+        letter-spacing: 0.08em;
+      }
+
+      .prototype-note::before {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--cyan);
+        box-shadow: 0 0 12px var(--cyan);
+        content: "";
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 37px;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 35px;
+        height: 35px;
+        place-items: center;
+        border: 1px solid rgba(0, 212, 212, 0.36);
+        border-radius: 11px;
+        background: linear-gradient(135deg, #16394b, #202b58);
+        color: var(--cyan);
+        font-size: 16px;
+        font-weight: 900;
+        box-shadow: inset 0 1px rgba(255,255,255,.14);
+      }
+
+      .brand strong { font-size: 14px; letter-spacing: .06em; }
+      .brand span { color: var(--muted); font-size: 11px; }
+
+      .eyebrow {
+        margin: 0 0 8px;
+        color: var(--cyan);
+        font-size: 11px;
+        font-weight: 750;
+        letter-spacing: .16em;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(27px, 8vw, 36px);
+        letter-spacing: -.035em;
+      }
+
+      .intro {
+        margin: 13px 0 28px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.75;
+      }
+
+      .section-head {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+
+      .section-head h2 { margin: 0; font-size: 17px; }
+      .section-head span { color: var(--violet); font-size: 12px; font-weight: 700; }
+
+      .service-list { display: grid; gap: 12px; }
+
+      .service-card {
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr) 19px;
+        gap: 14px;
+        align-items: center;
+        width: 100%;
+        min-height: 92px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: linear-gradient(135deg, rgba(28, 39, 59, .97), rgba(18, 27, 43, .97));
+        color: var(--text);
+        text-align: left;
+        font: inherit;
+        cursor: pointer;
+        box-shadow: 0 10px 28px rgba(0, 0, 0, .18), inset 0 1px rgba(255, 255, 255, .035);
+        transition: transform .18s ease, border-color .18s ease, background .18s ease;
+      }
+
+      .service-card:hover, .service-card:focus-visible {
+        border-color: rgba(0, 212, 212, .62);
+        background: linear-gradient(135deg, #203b50, #172b45);
+        outline: none;
+        transform: translateY(-2px);
+      }
+
+      .service-card__number {
+        display: grid;
+        width: 44px;
+        height: 44px;
+        place-items: center;
+        border-radius: 13px;
+        background: var(--cyan-soft);
+        color: #8ff7f7;
+        font-weight: 800;
+      }
+
+      .service-card__content { min-width: 0; }
+      .service-card strong { display: block; margin-bottom: 5px; font-size: 16px; }
+      .service-card small { display: block; overflow: hidden; color: var(--muted); font-size: 12px; line-height: 1.45; text-overflow: ellipsis; white-space: nowrap; }
+      .service-card__arrow { color: #75e3e4; font-size: 22px; font-weight: 300; }
+
+      .secondary-card { opacity: .72; }
+      .secondary-card .service-card__number { color: #c9c1ff; background: rgba(155, 140, 255, .14); }
+
+      .backdrop {
+        position: fixed;
+        z-index: 10;
+        inset: 0;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        padding: 0;
+        background: rgba(2, 7, 15, .72);
+        backdrop-filter: blur(8px);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .22s ease;
+      }
+
+      .backdrop.is-open { opacity: 1; pointer-events: auto; }
+
+      .sheet {
+        width: min(100%, 560px);
+        max-height: min(78vh, 710px);
+        overflow: auto;
+        border: 1px solid rgba(0, 212, 212, .25);
+        border-bottom: 0;
+        border-radius: 25px 25px 0 0;
+        background:
+          radial-gradient(circle at 80% 0%, rgba(0, 212, 212, .12), transparent 14rem),
+          #111a2a;
+        box-shadow: 0 -16px 55px rgba(0,0,0,.46), inset 0 1px rgba(255,255,255,.08);
+        transform: translateY(102%);
+        transition: transform .3s cubic-bezier(.2,.85,.3,1);
+      }
+
+      .is-open .sheet { transform: translateY(0); }
+      .sheet__drag { width: 42px; height: 4px; margin: 10px auto 0; border-radius: 99px; background: rgba(231, 246, 255, .31); }
+
+      .sheet__header {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 16px;
+        align-items: start;
+        padding: 20px 20px 18px;
+      }
+
+      .sheet__kicker { margin: 0 0 5px; color: var(--cyan); font-size: 11px; font-weight: 750; letter-spacing: .12em; }
+      .sheet__header h2 { margin: 0; font-size: 23px; letter-spacing: -.025em; }
+      .sheet__header p:last-child { margin: 7px 0 0; color: var(--muted); font-size: 12px; }
+
+      .close {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        padding: 0;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 50%;
+        background: rgba(21, 33, 51, .86);
+        color: var(--text);
+        font-size: 23px;
+        font-weight: 300;
+        line-height: 1;
+        cursor: pointer;
+      }
+
+      .close:hover, .close:focus-visible { border-color: var(--cyan); color: var(--cyan); outline: none; }
+
+      .sub-service-list {
+        display: grid;
+        gap: 10px;
+        padding: 0 14px calc(18px + env(safe-area-inset-bottom));
+      }
+
+      .sub-service {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 15px;
+        align-items: center;
+        min-height: 77px;
+        padding: 14px;
+        border: 1px solid rgba(170, 194, 225, .11);
+        border-radius: 14px;
+        background: rgba(24, 35, 55, .78);
+      }
+
+      .sub-service h3 { margin: 0 0 5px; font-size: 15px; }
+      .sub-service p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+      .price { color: var(--cyan); font-size: 20px; font-weight: 800; white-space: nowrap; text-shadow: 0 0 18px rgba(0,212,212,.18); }
+
+      @media (min-width: 720px) {
+        body { padding: 28px; }
+        .page { min-height: calc(100vh - 56px); border: 1px solid rgba(146, 174, 211, .13); border-radius: 26px; background: rgba(12, 18, 31, .48); }
+        .backdrop { padding: 0 28px; }
+        .sheet { border-bottom: 1px solid rgba(0, 212, 212, .25); border-radius: 25px; margin-bottom: 28px; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .service-card, .backdrop, .sheet { transition: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page" aria-label="服务列表原型">
+      <div class="prototype-note">STATIC PROTOTYPE · 不接入真实数据</div>
+      <header class="brand">
+        <span class="brand-mark" aria-hidden="true">11</span>
+        <strong>11号电竞工作室</strong>
+        <span>专业游戏服务</span>
+      </header>
+
+      <p class="eyebrow">GENSHIN IMPACT · 服务需求</p>
+      <h1>选择你需要的服务</h1>
+      <p class="intro">点击大项目卡片，查看该类服务包含的小项目与独立报价。</p>
+
+      <section aria-labelledby="services-heading">
+        <div class="section-head">
+          <h2 id="services-heading">服务列表</h2>
+          <span>共 4 项</span>
+        </div>
+        <div class="service-list">
+          <button class="service-card" id="daily-card" type="button" aria-haspopup="dialog" aria-controls="daily-sheet">
+            <span class="service-card__number">01</span>
+            <span class="service-card__content"><strong>日常委托</strong><small>每日委托、体力与基础资源安排</small></span>
+            <span class="service-card__arrow" aria-hidden="true">›</span>
+          </button>
+          <button class="service-card secondary-card" type="button" aria-label="深渊满星（本原型不展示详情）">
+            <span class="service-card__number">02</span>
+            <span class="service-card__content"><strong>深渊满星</strong><small>深境螺旋挑战与配队建议</small></span>
+            <span class="service-card__arrow" aria-hidden="true">›</span>
+          </button>
+          <button class="service-card secondary-card" type="button" aria-label="角色培养（本原型不展示详情）">
+            <span class="service-card__number">03</span>
+            <span class="service-card__content"><strong>角色培养</strong><small>材料收集、天赋与武器规划</small></span>
+            <span class="service-card__arrow" aria-hidden="true">›</span>
+          </button>
+          <button class="service-card secondary-card" type="button" aria-label="提瓦特探索（本原型不展示详情）">
+            <span class="service-card__number">04</span>
+            <span class="service-card__content"><strong>提瓦特探索</strong><small>区域探索、宝箱与神瞳收集</small></span>
+            <span class="service-card__arrow" aria-hidden="true">›</span>
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <div class="backdrop" id="daily-backdrop" aria-hidden="true">
+      <section class="sheet" id="daily-sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+        <div class="sheet__drag" aria-hidden="true"></div>
+        <header class="sheet__header">
+          <div>
+            <p class="sheet__kicker">日常委托 · 5 个小项目</p>
+            <h2 id="sheet-title">日常委托服务明细</h2>
+            <p>以下名称、说明和价格均为占位内容。</p>
+          </div>
+          <button class="close" id="close-sheet" type="button" aria-label="关闭日常委托服务明细">×</button>
+        </header>
+        <div class="sub-service-list">
+          <article class="sub-service"><div><h3>项目 1</h3><p>一句话说明：占位服务内容说明。</p></div><strong class="price">¥xx</strong></article>
+          <article class="sub-service"><div><h3>项目 2</h3><p>一句话说明：占位服务内容说明。</p></div><strong class="price">¥xx</strong></article>
+          <article class="sub-service"><div><h3>项目 3</h3><p>一句话说明：占位服务内容说明。</p></div><strong class="price">¥xx</strong></article>
+          <article class="sub-service"><div><h3>项目 4</h3><p>一句话说明：占位服务内容说明。</p></div><strong class="price">¥xx</strong></article>
+          <article class="sub-service"><div><h3>项目 5</h3><p>一句话说明：占位服务内容说明。</p></div><strong class="price">¥xx</strong></article>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      const card = document.querySelector("#daily-card");
+      const backdrop = document.querySelector("#daily-backdrop");
+      const closeButton = document.querySelector("#close-sheet");
+      let returnFocus = null;
+
+      function openSheet() {
+        returnFocus = document.activeElement;
+        backdrop.classList.add("is-open");
+        backdrop.setAttribute("aria-hidden", "false");
+        document.body.style.overflow = "hidden";
+        closeButton.focus();
+      }
+
+      function closeSheet() {
+        backdrop.classList.remove("is-open");
+        backdrop.setAttribute("aria-hidden", "true");
+        document.body.style.overflow = "";
+        returnFocus?.focus();
+      }
+
+      card.addEventListener("click", openSheet);
+      closeButton.addEventListener("click", closeSheet);
+      backdrop.addEventListener("click", (event) => { if (event.target === backdrop) closeSheet(); });
+      document.addEventListener("keydown", (event) => { if (event.key === "Escape" && backdrop.classList.contains("is-open")) closeSheet(); });
+    </script>
+  </body>
+</html>

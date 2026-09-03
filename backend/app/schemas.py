@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict
 
 
-class ServicePublic(BaseModel):
+class ServiceItemPublic(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     name: str
@@ -9,6 +9,18 @@ class ServicePublic(BaseModel):
     description: str
     sort_order: int
     is_active: bool
+
+
+class ServicePublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    price: str
+    description: str
+    cover_image: str
+    sort_order: int
+    is_active: bool
+    items: list[ServiceItemPublic]
 
 
 class GamePublic(BaseModel):
@@ -68,6 +80,15 @@ class GameWrite(BaseModel):
 
 
 class ServiceWrite(BaseModel):
+    name: str
+    price: str
+    description: str = ""
+    cover_image: str | None = None
+    sort_order: int = 0
+    is_active: bool = True
+
+
+class ServiceItemWrite(BaseModel):
     name: str
     price: str
     description: str = ""

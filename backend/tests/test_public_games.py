@@ -1,3 +1,6 @@
+from pathlib import Path
+
+
 def test_public_games_returns_seeded_enabled_games_in_order(client):
     response = client.get("/api/games")
 
@@ -6,6 +9,26 @@ def test_public_games_returns_seeded_enabled_games_in_order(client):
     assert [game["slug"] for game in games] == ["genshin", "star-rail", "zenless-zone-zero", "wuthering-waves"]
     assert all(game["is_active"] for game in games)
     assert games[0]["services"][0]["price"] == "¥ 30"
+    assert games[0]["services"][0]["cover_image"] == games[0]["cover_image"]
+
+
+def test_admin_can_set_a_service_cover_without_changing_the_game_cover(client):
+    client.post("/api/auth/login", json={"username": "admin", "password": "admin-password"})
+    game = client.get("/api/admin/games").json()[0]
+    service = game["services"][0]
+
+    updated = client.patch(
+        f"/api/admin/services/{service['id']}",
+        json={
+            "name": service["name"], "price": service["price"], "description": service["description"],
+            "cover_image": "/uploads/games/custom-service-cover.jpg", "sort_order": service["sort_order"], "is_active": service["is_active"],
+        },
+    )
+    public_game = client.get("/api/games").json()[0]
+
+    assert updated.status_code == 200
+    assert public_game["cover_image"] == game["cover_image"]
+    assert public_game["services"][0]["cover_image"] == "/uploads/games/custom-service-cover.jpg"
 
 
 def test_seeded_games_have_five_enabled_services(client):
@@ -13,6 +36,30 @@ def test_seeded_games_have_five_enabled_services(client):
 
     assert len(games) == 4
     assert all(len(game["services"]) == 5 for game in games)
+    assert all(len(service["items"]) == 5 for game in games for service in game["services"])
+
+
+def test_admin_can_manage_child_projects_for_one_service(client):
+    client.post("/api/auth/login", json={"username": "admin", "password": "admin-password"})
+    service = client.get("/api/admin/games").json()[0]["services"][0]
+    item = service["items"][0]
+
+    disabled = client.post(f"/api/admin/service-items/{item['id']}/disable")
+    public = client.get("/api/games").json()
+    public_service = public[0]["services"][0]
+
+    assert disabled.status_code == 200
+    assert len(public_service["items"]) == 4
+    assert item["id"] not in [child["id"] for child in public_service["items"]]
+
+    created = client.post(
+        f"/api/admin/services/{service['id']}/items",
+        json={"name": "新增子项目", "price": "¥ 66", "description": "只归属于当前大项目", "sort_order": 5, "is_active": True},
+    )
+    refreshed_service = client.get("/api/games").json()[0]["services"][0]
+
+    assert created.status_code == 201
+    assert [child["name"] for child in refreshed_service["items"]][-1] == "新增子项目"
 
 
 def test_public_settings_returns_contact_fields(client):
@@ -140,6 +187,23 @@ def test_invalid_upload_extension_returns_structured_error(client):
 
     assert response.status_code == 422
     assert response.json() == {"code": "UPLOAD_INVALID_TYPE", "message": "不支持的图片类型", "details": {}}
+
+
+def test_cover_upload_accepts_a_valid_image_with_a_generic_browser_mime_type(client):
+    client.post("/api/auth/login", json={"username": "admin", "password": "admin-password"})
+
+    response = client.post(
+        "/api/admin/uploads/game-cover",
+        files={"file": ("cover.png", b"\x89PNG\r\n\x1a\nimage-data", "application/octet-stream")},
+    )
+
+    assert response.status_code == 200
+    uploaded_path = response.json()["path"]
+    try:
+        assert uploaded_path.endswith(".png")
+        assert client.get(uploaded_path).status_code == 200
+    finally:
+        Path(uploaded_path.lstrip("/")).unlink(missing_ok=True)
 
 
 def test_invalid_request_returns_structured_error(client):

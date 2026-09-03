@@ -33,7 +33,7 @@ export default function AdminDashboard() {
   const activeServices = games.flatMap((game) => game.services).filter((service) => service.is_active).length;
 
   return <AdminLayout active="dashboard" crumb="控制台">
-    <AdminPageTitle title="下午好，欢迎回来 👋" description="这是 11号电竞当前的运营状态，所有核心内容都在正常展示。" actions={<><a className="admin-v2-secondary" href="/" target="_blank">预览前台</a><a className="admin-v2-primary" href="/admin/games/new">＋ 新增游戏</a></>} />
+    <AdminPageTitle title="下午好，欢迎回来 👋" description="这是 11号电竞当前的运营状态，所有核心内容都在正常展示。" actions={<><a className="admin-v2-secondary" href="/" target="_blank">预览前台</a><a className="admin-v2-primary" href="/admin/games/new"><span aria-hidden="true">＋</span><span>新增游戏</span></a></>} />
     {error && <p className="admin-v2-error">{error}</p>}
     <section className="admin-v2-stats">
       <article className="admin-v2-stat"><div><span>游戏总数</span><i>▣</i></div><strong>{dashboard?.game_count ?? "–"}</strong><small>全部已启用 <b className="admin-v2-success">{dashboard ? `${dashboard.active_game_count}/${dashboard.game_count}` : ""}</b></small></article>

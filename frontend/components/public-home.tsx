@@ -8,6 +8,15 @@ export type Service = {
   name: string;
   price: string;
   description: string;
+  cover_image?: string;
+  items: ServiceItem[];
+};
+
+export type ServiceItem = {
+  id: number;
+  name: string;
+  price: string;
+  description: string;
 };
 
 export type Game = {
@@ -221,7 +230,6 @@ export default function PublicHome({ games, settings }: { games: Game[]; setting
         <ServiceModal
           game={selectedGame}
           selectedService={selectedService}
-          services={services}
           onClose={() => setSelectedService(null)}
         />
       )}
@@ -270,15 +278,14 @@ function Header({
 export function ServiceModal({
   game,
   selectedService,
-  services,
   onClose,
 }: {
   game: Game;
   selectedService: Service;
-  services: Service[];
   onClose: () => void;
 }) {
-  const orderedServices = modalRows(services);
+  const orderedItems = modalRows(selectedService.items);
+  const serviceCover = selectedService.cover_image || game.cover_image;
 
   return (
     <div className={styles.modalBackdrop} onClick={onClose}>
@@ -294,27 +301,27 @@ export function ServiceModal({
         </button>
 
         <figure className={styles.modalCover}>
-          <img src={game.cover_image} alt={`${game.name}服务封面`} />
+          <img src={serviceCover} alt={`${selectedService.name}服务封面`} />
           <figcaption>
-            <span>{game.name} · 服务详情</span>
+            <span>{game.name} · {selectedService.name}</span>
           </figcaption>
         </figure>
 
-        <div className={styles.priceList} aria-label="服务报价明细">
-          {orderedServices.map((service) => {
+        <div className={styles.priceList} aria-label={`${selectedService.name}子项目报价明细`}>
+          {orderedItems.length > 0 ? orderedItems.map((item) => {
             return (
               <article
-                className={`${styles.priceRow} ${service.id === selectedService.id ? styles.featuredPriceRow : ""}`}
-                key={service.id}
+                className={styles.priceRow}
+                key={item.id}
               >
                 <div>
-                  <h3>{service.name}</h3>
-                  {service.description?.trim() && <p>{service.description}</p>}
+                  <h3>{item.name}</h3>
+                  {item.description?.trim() && <p>{item.description}</p>}
                 </div>
-                {service.price?.trim() && <strong>{service.price}</strong>}
+                {item.price?.trim() && <strong>{item.price}</strong>}
               </article>
             );
-          })}
+          }) : <p className={styles.emptyItems}>该大项目暂未配置子项目，请在后台添加。</p>}
         </div>
       </section>
     </div>
