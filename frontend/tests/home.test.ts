@@ -29,8 +29,15 @@ describe("public game cards", () => {
     const css = readFileSync(resolve(process.cwd(), "components/public-home.module.css"), "utf8");
     const source = readFileSync(resolve(process.cwd(), "components/public-home.tsx"), "utf8");
 
-    expect(css).not.toMatch(/@media \(max-width: 800px\)\s*\{[\s\S]*?\.workspace\s*\{\s*grid-template-columns:\s*1fr;/);
+    expect(css).toMatch(/@media \(max-width: 800px\)\s*\{[\s\S]*?\.workspace\s*\{\s*grid-template-columns:\s*minmax\(190px,\s*0\.95fr\)\s+minmax\(0,\s*1\.15fr\);/);
+    expect(css).not.toMatch(/@media \(max-width: 479px\)/);
     expect(source).not.toMatch(/matchMedia|scrollIntoView|demandsRef|isMobile|id="games"/);
+  });
+
+  it("keeps a minimum width on the game panel so game names never collapse", () => {
+    const css = readFileSync(resolve(process.cwd(), "components/public-home.module.css"), "utf8");
+
+    expect(css).toMatch(/grid-template-columns:\s*minmax\(\d{3}px,\s*0\.95fr\)\s+minmax\(0,\s*1\.15fr\)/);
   });
 
   it("limits public demand cards to five enabled services", () => {
