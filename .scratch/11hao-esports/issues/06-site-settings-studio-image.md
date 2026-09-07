@@ -4,7 +4,7 @@
 
 **Blocked by:** 04 — 建立管理员登录和后台概览
 
-**Status:** ready-for-agent
+**Status:** DONE
 
 - [ ] 提供 `/admin/settings` 网站设置页面
 - [ ] 支持编辑网站名称、副标题、微信号、QQ 号、电话和咨询提示文字

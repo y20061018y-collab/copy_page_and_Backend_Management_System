@@ -4,7 +4,7 @@
 
 **Blocked by:** None — can start immediately
 
-**Status:** ready-for-agent
+**Status:** DONE
 
 - [ ] 建立 SQLAlchemy 模型、Alembic 迁移和 PostgreSQL 测试数据库配置
 - [ ] 建立 `Game`、`GameService` 和单条 `SiteSetting` 数据关系

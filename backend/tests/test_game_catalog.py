@@ -5,7 +5,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.database import Base
 from app.game_catalog import DuplicateGameSlug, EnabledServiceLimitReached, GameCatalog
-from app.models import Game, GameService, ServiceItem
+from app.models import Game, GameService
 from app.public_game_catalog import PublicGameCatalog
 from app.schemas import GameWrite, ReorderItem, ServiceWrite
 
@@ -39,14 +39,10 @@ def seed_catalog(db: Session) -> None:
         sort_order=2,
         is_active=True,
     )
-    first_service = GameService(name="第一服务", description="第一", sort_order=0, is_active=True)
-    first_service.items = [
-        ServiceItem(name="隐藏子项目", price="¥ 20", sort_order=1, is_active=False),
-        ServiceItem(name="第一子项目", price="¥ 10", sort_order=0, is_active=True),
-    ]
+    first_service = GameService(name="第一服务", price="¥ 10", description="第一", sort_order=0, is_active=True)
     active.services = [
-        GameService(name="第二服务", description="第二", sort_order=2, is_active=True),
-        GameService(name="隐藏服务", description="隐藏", sort_order=1, is_active=False),
+        GameService(name="第二服务", price="¥ 20", description="第二", sort_order=2, is_active=True),
+        GameService(name="隐藏服务", price="¥ 30", description="隐藏", sort_order=1, is_active=False),
         first_service,
     ]
     disabled = Game(
@@ -83,15 +79,13 @@ def game_write(game: Game, **overrides) -> GameWrite:
 def test_public_games_hide_disabled_games_and_services(db: Session):
     game = db.query(Game).filter_by(slug="genshin").one()
     original_services = list(game.services)
-    original_items = list(original_services[2].items)
 
     games = PublicGameCatalog(db).list_games()
 
     assert [game.slug for game in games] == ["genshin"]
     assert [service.name for service in games[0].services] == ["第一服务", "第二服务"]
-    assert [item.name for item in games[0].services[0].items] == ["第一子项目"]
+    assert [service.price for service in games[0].services] == ["¥ 10", "¥ 20"]
     assert game.services == original_services
-    assert original_services[2].items == original_items
 
 
 def test_admin_games_include_disabled_games_and_sort_services(db: Session):
@@ -140,17 +134,31 @@ def test_dashboard_counts_come_from_catalog(db: Session):
     assert counts.active_game_count == 1
     assert counts.service_count == 3
     assert counts.active_service_count == 2
+    assert counts.content_health_score == 80
+
+
+def test_content_health_score_reflects_missing_content(db: Session):
+    game = db.query(Game).filter_by(slug="genshin").one()
+    service = next(service for service in game.services if service.name == "第一服务")
+    game.cover_image = ""
+    service.description = ""
+    db.commit()
+
+    counts = GameCatalog(db).dashboard_counts()
+
+    assert counts.content_health_score == 40
 
 
 def test_create_service_commits_and_returns_service(db: Session):
     game = db.query(Game).filter_by(slug="genshin").one()
     service = GameCatalog(db).create_service(
         game.id,
-        ServiceWrite(name="新增服务", description="新增描述", sort_order=3, is_active=True),
+        ServiceWrite(name="新增服务", price="¥ 40", description="新增描述", sort_order=3, is_active=True),
     )
 
     assert service.id is not None
     assert db.get(GameService, service.id).name == "新增服务"
+    assert db.get(GameService, service.id).price == "¥ 40"
 
 
 def test_create_service_rejects_a_sixth_enabled_service(db: Session):
@@ -159,13 +167,13 @@ def test_create_service_rejects_a_sixth_enabled_service(db: Session):
     for index in range(3):
         catalog.create_service(
             game.id,
-            ServiceWrite(name=f"补充需求 {index}", description="测试", sort_order=10 + index, is_active=True),
+            ServiceWrite(name=f"补充需求 {index}", price="¥ 1", description="测试", sort_order=10 + index, is_active=True),
         )
 
     with pytest.raises(EnabledServiceLimitReached):
         catalog.create_service(
             game.id,
-            ServiceWrite(name="第六项", description="测试", sort_order=99, is_active=True),
+            ServiceWrite(name="第六项", price="¥ 1", description="测试", sort_order=99, is_active=True),
         )
 
 
@@ -175,14 +183,14 @@ def test_update_service_rejects_enabling_a_sixth_service(db: Session):
     for index in range(4):
         catalog.create_service(
             game.id,
-            ServiceWrite(name=f"补充需求 {index}", description="测试", sort_order=10 + index, is_active=index < 3),
+            ServiceWrite(name=f"补充需求 {index}", price="¥ 1", description="测试", sort_order=10 + index, is_active=index < 3),
         )
     disabled_service = next(service for service in game.services if service.name == "补充需求 3")
 
     with pytest.raises(EnabledServiceLimitReached):
         catalog.update_service(
             disabled_service.id,
-            ServiceWrite(name="补充需求 3", description="测试", sort_order=13, is_active=True),
+            ServiceWrite(name="补充需求 3", price="¥ 1", description="测试", sort_order=13, is_active=True),
         )
 
 
@@ -192,7 +200,7 @@ def test_set_service_enabled_rejects_a_sixth_service(db: Session):
     for index in range(4):
         catalog.create_service(
             game.id,
-            ServiceWrite(name=f"补充需求 {index}", description="测试", sort_order=10 + index, is_active=index < 3),
+            ServiceWrite(name=f"补充需求 {index}", price="¥ 1", description="测试", sort_order=10 + index, is_active=index < 3),
         )
     disabled_service = next(service for service in game.services if service.name == "补充需求 3")
 

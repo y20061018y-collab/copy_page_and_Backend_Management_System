@@ -1,6 +1,6 @@
 # 11号电竞展示与管理系统
 
-**Status:** ready-for-agent  
+**Status:** DONE  
 **Type:** feature specification  
 **Priority:** high  
 **Labels:** `ready-for-agent`  

@@ -4,9 +4,9 @@
 
 - **Game**: a supported esports game shown on the public website.
 - **GameService**: a service and price entry belonging to one Game.
-- **ServiceItem**: a subproject belonging to one GameService, with a name, price, description, display order, and enabled state.
+- **ChildService**: a child service entry belonging to one GameService, with its own name, description, price text, display order, and optional image.
 - **Game catalog**: the set of Games and GameServices available for public display and admin maintenance, including their ordering and visibility.
-- **Public Game catalog snapshot**: the enabled Games, GameServices, and ServiceItems in display order as presented on the public website.
+- **Public Game catalog snapshot**: the enabled Games, GameServices, and their ChildServices in display order as presented on the public website.
 - **AdminUser**: the administrator allowed to manage games, services, images, and site settings.
 - **SiteSetting**: the single site-wide configuration record, including contact details and the studio image.
 - **Studio image**: the brand image shown in the public header/footer and replaceable from the admin settings page.

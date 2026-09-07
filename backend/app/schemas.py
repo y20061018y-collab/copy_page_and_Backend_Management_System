@@ -1,25 +1,26 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class ServiceItemPublic(BaseModel):
+class ChildServicePublic(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     name: str
     price: str
     description: str
+    image_path: str | None
     sort_order: int
-    is_active: bool
 
 
 class ServicePublic(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     name: str
+    price: str
     description: str
     cover_image: str
     sort_order: int
     is_active: bool
-    items: list[ServiceItemPublic]
+    child_services: list[ChildServicePublic] = Field(default_factory=list)
 
 
 class GamePublic(BaseModel):
@@ -63,6 +64,7 @@ class DashboardPublic(BaseModel):
     active_game_count: int
     service_count: int
     active_service_count: int
+    content_health_score: int
     latest_updated_at: str | None
 
 
@@ -80,18 +82,19 @@ class GameWrite(BaseModel):
 
 class ServiceWrite(BaseModel):
     name: str
+    price: str
     description: str = ""
     cover_image: str | None = None
     sort_order: int = 0
     is_active: bool = True
 
 
-class ServiceItemWrite(BaseModel):
+class ChildServiceWrite(BaseModel):
     name: str
     price: str
     description: str = ""
+    image_path: str | None = None
     sort_order: int = 0
-    is_active: bool = True
 
 
 class SiteSettingWrite(BaseModel):

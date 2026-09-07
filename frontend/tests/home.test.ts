@@ -5,6 +5,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import PublicHome, {
   ServiceModal,
+  childServiceRows,
   featuredServices,
   gameDetails,
   modalRows,
@@ -25,19 +26,19 @@ describe("public game cards", () => {
     expect(css).toMatch(/\.demandCard i\s*\{[^}]*font-size:\s*(?:1[2-9]|[2-9]\d)px;/);
   });
 
-  it("keeps the game and demand panels side by side at every viewport width", () => {
+  it("uses the approved public catalog mobile breakpoint contract", () => {
     const css = readFileSync(resolve(process.cwd(), "components/public-home.module.css"), "utf8");
     const source = readFileSync(resolve(process.cwd(), "components/public-home.tsx"), "utf8");
 
-    expect(css).toMatch(/@media \(max-width: 800px\)\s*\{[\s\S]*?\.workspace\s*\{\s*grid-template-columns:\s*minmax\(190px,\s*0\.95fr\)\s+minmax\(0,\s*1\.15fr\);/);
-    expect(css).not.toMatch(/@media \(max-width: 479px\)/);
+    expect(css).toMatch(/@media \(max-width: 600px\)\s*\{[\s\S]*?\.workspace\s*\{\s*grid-template-columns:\s*minmax\(150px,\s*0\.76fr\)\s+minmax\(0,\s*1\.24fr\);/);
+    expect(css).toMatch(/@media \(max-width: 374px\)\s*\{[\s\S]*?\.workspace\s*\{\s*grid-template-columns:\s*1fr;/);
     expect(source).not.toMatch(/matchMedia|scrollIntoView|demandsRef|isMobile|id="games"/);
   });
 
-  it("keeps a minimum width on the game panel so game names never collapse", () => {
+  it("keeps a minimum width on the mobile game panel so game names never collapse", () => {
     const css = readFileSync(resolve(process.cwd(), "components/public-home.module.css"), "utf8");
 
-    expect(css).toMatch(/grid-template-columns:\s*minmax\(\d{3}px,\s*0\.95fr\)\s+minmax\(0,\s*1\.15fr\)/);
+    expect(css).toMatch(/@media \(max-width: 600px\)\s*\{[\s\S]*?grid-template-columns:\s*minmax\(150px,\s*0\.76fr\)\s+minmax\(0,\s*1\.24fr\)/);
   });
 
   it("limits public demand cards to five enabled services", () => {
@@ -68,16 +69,26 @@ describe("public game cards", () => {
     expect(result[3]).toBe(services[3]);
   });
 
-  it("keeps a selected service's child projects in API order", () => {
-    const items = [
+  it("keeps modal service rows in API order", () => {
+    const services = [
       { id: 1, name: "日常委托", price: "¥ 30", description: "完成每日委托" },
       { id: 2, name: "深渊满星", price: "¥ 88", description: "挑战深境螺旋" },
       { id: 3, name: "角色培养", price: "¥ 120", description: "规划角色资源" },
     ];
-    const result = modalRows(items);
+    const result = modalRows(services);
 
-    expect(result).toBe(items);
-    expect(result).toEqual(items);
+    expect(result).toBe(services);
+    expect(result).toEqual(services);
+  });
+
+  it("keeps child service rows in API order", () => {
+    const childServices = [
+      { id: 11, name: "11", price: "¥ 30", description: "完成基础目标与前置内容。", image_path: "/uploads/games/sample.png" },
+      { id: 12, name: "12", price: "¥ 88", description: "完成进阶目标。", image_path: null },
+    ];
+
+    expect(childServiceRows(childServices)).toBe(childServices);
+    expect(childServiceRows(undefined)).toEqual([]);
   });
 
   it("uses game API tag and description without known-slug overrides", () => {
@@ -96,7 +107,7 @@ describe("public game cards", () => {
       cover_image: "/api-game-cover.png",
       accent_color: "#123456",
       accent_color_2: "#654321",
-      services: [{ id: 41, name: "定制开荒", description: "根据存档制定路线", cover_image: "/custom-service-cover.png", items: [] }],
+      services: [{ id: 41, name: "定制开荒", price: "¥ 66", description: "根据存档制定路线", cover_image: "/custom-service-cover.png" }],
     };
 
     const html = renderToStaticMarkup(
@@ -110,13 +121,12 @@ describe("public game cards", () => {
     expect(html).toContain('src="/custom-service-cover.png"');
   });
 
-  it("renders only the clicked large project's child projects in the modal", () => {
+  it("renders the clicked service's direct price in the modal", () => {
     const selectedService = {
       id: 41,
       name: "深渊挑战",
       price: "¥ 88",
-      description: "外层大项目",
-      items: [{ id: 411, name: "12 层满星", price: "¥ 120", description: "完成深渊目标" }],
+      description: "完成深渊挑战",
     };
     const game: Game = {
       id: 9,
@@ -127,15 +137,58 @@ describe("public game cards", () => {
       cover_image: "/test-game.jpg",
       accent_color: "#123456",
       accent_color_2: "#654321",
-      services: [selectedService, { id: 42, name: "不应出现的同级大项目", price: "¥ 30", description: "", items: [] }],
+      services: [selectedService, { id: 42, name: "同级服务", price: "¥ 30", description: "" }],
     };
 
     const html = renderToStaticMarkup(createElement(ServiceModal, { game, selectedService, onClose: () => {} }));
 
-    expect(html).toContain("12 层满星");
-    expect(html).not.toContain("不应出现的同级大项目");
+    expect(html).toContain("完成深渊挑战");
+    expect(html).toContain("¥ 88");
+    expect(html).not.toContain("同级服务");
     expect(html).toContain("测试游戏 · 深渊挑战");
-    expect(html).not.toContain("子项目详情");
+    expect(html).not.toContain(["子", "项目"].join(""));
+  });
+
+  it("renders child services with optional images in the service modal", () => {
+    const selectedService = {
+      id: 41,
+      name: "日常委托",
+      price: "¥ 30",
+      description: "完成每日委托",
+      child_services: [
+        { id: 11, name: "11", price: "¥ 30", description: "完成基础目标与前置内容。", image_path: "/uploads/games/child.png" },
+        { id: 12, name: "12", price: "¥ 88", description: "完成进阶目标。", image_path: null },
+      ],
+    };
+    const game: Game = {
+      id: 9,
+      name: "测试游戏",
+      slug: "test-game",
+      tag: "测试",
+      description: "测试说明",
+      cover_image: "/test-game.jpg",
+      accent_color: "#123456",
+      accent_color_2: "#654321",
+      services: [selectedService],
+    };
+
+    const html = renderToStaticMarkup(createElement(ServiceModal, { game, selectedService, onClose: () => {} }));
+
+    expect(html).toContain("日常委托");
+    expect(html).toContain("完成每日委托");
+    expect(html).toContain("完成基础目标与前置内容。");
+    expect(html).toContain('src="/uploads/games/child.png"');
+    expect(html).toContain("完成进阶目标。");
+    expect(html).not.toContain("null");
+  });
+
+  it("keeps child service cards responsive at the approved mobile breakpoints", () => {
+    const css = readFileSync(resolve(process.cwd(), "components/public-home.module.css"), "utf8");
+
+    expect(css).toMatch(/@media \(max-width: 600px\)\s*\{[\s\S]*?\.childServiceList\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/);
+    expect(css).toMatch(/@media \(max-width: 374px\)\s*\{[\s\S]*?\.childServiceList\s*\{[\s\S]*?grid-template-columns:\s*1fr;/);
+    expect(css).toMatch(/\.childServiceBody strong\s*\{[\s\S]*?white-space:\s*nowrap;/);
+    expect(css).toMatch(/\.childServiceBody > div\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)\s+max-content;/);
   });
 
   it("uses the bundled studio image for all public brand nodes when no image is configured", () => {
@@ -210,9 +263,9 @@ describe("public game cards", () => {
 
   it("renders supplied game, settings, and ordered service API values", () => {
     const services = [
-      { id: 41, name: "定制开荒", price: "¥ 66", description: "根据存档制定路线", items: [{ id: 411, name: "基础开荒", price: "¥ 30", description: "完成基础任务" }] },
-      { id: 12, name: "高难挑战", price: "¥ 99", description: "完成限定挑战目标", items: [] },
-      { id: 88, name: "资源规划", price: "¥ 45", description: "优化养成资源分配", items: [] },
+      { id: 41, name: "定制开荒", price: "¥ 66", description: "根据存档制定路线" },
+      { id: 12, name: "高难挑战", price: "¥ 99", description: "完成限定挑战目标" },
+      { id: 88, name: "资源规划", price: "¥ 45", description: "优化养成资源分配" },
     ];
     const games: Game[] = [
       {

@@ -14,7 +14,7 @@ type Props = {
 const navigation: Array<{ key: AdminSection; href: string; icon: string; label: string }> = [
   { key: "dashboard", href: "/admin", icon: "⌂", label: "控制台" },
   { key: "games", href: "/admin/games", icon: "▣", label: "游戏目录" },
-  { key: "services", href: "/admin/services", icon: "☷", label: "服务项目" },
+  { key: "services", href: "/admin/services", icon: "☷", label: "服务" },
   { key: "media", href: "/admin/media", icon: "▧", label: "媒体素材" },
   { key: "settings", href: "/admin/settings", icon: "⚙", label: "网站设置" },
   { key: "account", href: "/admin/account", icon: "♙", label: "管理员账号" },

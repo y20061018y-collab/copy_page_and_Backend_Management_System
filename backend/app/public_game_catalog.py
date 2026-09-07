@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models import Game, GameService
-from app.schemas import GamePublic, ServiceItemPublic, ServicePublic
+from app.schemas import ChildServicePublic, GamePublic, ServicePublic
 
 
 class PublicGameCatalog:
@@ -13,7 +13,7 @@ class PublicGameCatalog:
         games = self.db.scalars(
             select(Game)
             .where(Game.is_active.is_(True))
-            .options(selectinload(Game.services).selectinload(GameService.items))
+            .options(selectinload(Game.services).selectinload(GameService.child_services))
             .order_by(Game.sort_order, Game.id)
         ).unique()
         return [self._game_snapshot(game) for game in games]
@@ -35,22 +35,23 @@ class PublicGameCatalog:
                 ServicePublic(
                     id=service.id,
                     name=service.name,
+                    price=service.price,
                     description=service.description,
                     cover_image=service.cover_image,
                     sort_order=service.sort_order,
                     is_active=service.is_active,
-                    items=[
-                        ServiceItemPublic(
-                            id=item.id,
-                            name=item.name,
-                            price=item.price,
-                            description=item.description,
-                            sort_order=item.sort_order,
-                            is_active=item.is_active,
+                    child_services=[
+                        ChildServicePublic(
+                            id=child_service.id,
+                            name=child_service.name,
+                            price=child_service.price,
+                            description=child_service.description,
+                            image_path=child_service.image_path,
+                            sort_order=child_service.sort_order,
                         )
-                        for item in sorted(
-                            (item for item in service.items if item.is_active),
-                            key=lambda item: (item.sort_order, item.id),
+                        for child_service in sorted(
+                            service.child_services,
+                            key=lambda child_service: (child_service.sort_order, child_service.id),
                         )
                     ],
                 )

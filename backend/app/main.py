@@ -8,10 +8,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db, initialize_database
-from app.game_catalog import DuplicateGameSlug, EnabledServiceItemLimitReached, EnabledServiceLimitReached, GameCatalog, GameCatalogError, GameNotFound, InvalidCatalogAction, ServiceItemNotFound, ServiceNotFound
-from app.models import AdminUser, Game, GameService, ServiceItem, SiteSetting
+from app.game_catalog import ChildServiceNotFound, DuplicateGameSlug, EnabledServiceLimitReached, GameCatalog, GameCatalogError, GameNotFound, InvalidCatalogAction, ServiceNotFound
+from app.models import AdminUser, ChildService, Game, GameService, SiteSetting
 from app.public_game_catalog import PublicGameCatalog
-from app.schemas import AdminPublic, DashboardPublic, GamePublic, GameWrite, LoginRequest, ReorderItem, ServiceItemPublic, ServiceItemWrite, ServicePublic, ServiceWrite, SiteSettingPublic, SiteSettingWrite
+from app.schemas import AdminPublic, ChildServicePublic, ChildServiceWrite, DashboardPublic, GamePublic, GameWrite, LoginRequest, ReorderItem, ServicePublic, ServiceWrite, SiteSettingPublic, SiteSettingWrite
 from app.security import COOKIE_NAME, create_token, get_current_admin, password_hash
 from app.errors import api_error, http_error_handler, validation_error_handler
 
@@ -86,19 +86,14 @@ def catalog_http_error(error: GameCatalogError) -> HTTPException:
             status_code=409,
             detail={"code": "SERVICE_LIMIT_REACHED", "message": "每个游戏最多 5 个启用需求"},
         )
-    if isinstance(error, EnabledServiceItemLimitReached):
-        return HTTPException(
-            status_code=409,
-            detail={"code": "SERVICE_ITEM_LIMIT_REACHED", "message": "每个服务最多 5 个启用子项目"},
-        )
     if isinstance(error, DuplicateGameSlug):
         return HTTPException(status_code=409, detail="slug 已存在")
     if isinstance(error, GameNotFound):
         return HTTPException(status_code=404, detail="游戏不存在")
     if isinstance(error, ServiceNotFound):
         return HTTPException(status_code=404, detail="服务不存在")
-    if isinstance(error, ServiceItemNotFound):
-        return HTTPException(status_code=404, detail="服务子项目不存在")
+    if isinstance(error, ChildServiceNotFound):
+        return HTTPException(status_code=404, detail="子服务不存在")
     if isinstance(error, InvalidCatalogAction):
         return HTTPException(status_code=422, detail="不支持的操作")
     return HTTPException(status_code=400, detail="目录操作失败")
@@ -166,11 +161,20 @@ def update_service(service_id: int, payload: ServiceWrite, request: Request, db:
         raise catalog_http_error(exc) from exc
 
 
-@app.post("/api/admin/services/{service_id}/items", response_model=ServiceItemPublic, status_code=201)
-def create_service_item(service_id: int, payload: ServiceItemWrite, request: Request, db: Session = Depends(get_db)) -> ServiceItem:
+@app.post("/api/admin/services/{service_id}/child-services", response_model=ChildServicePublic, status_code=201)
+def create_child_service(service_id: int, payload: ChildServiceWrite, request: Request, db: Session = Depends(get_db)) -> ChildService:
     require_admin(request, db)
     try:
-        return GameCatalog(db).create_service_item(service_id, payload)
+        return GameCatalog(db).create_child_service(service_id, payload)
+    except GameCatalogError as exc:
+        raise catalog_http_error(exc) from exc
+
+
+@app.patch("/api/admin/services/{service_id}/child-services/reorder")
+def reorder_child_services(service_id: int, items: list[ReorderItem], request: Request, db: Session = Depends(get_db)) -> dict[str, bool]:
+    require_admin(request, db)
+    try:
+        return GameCatalog(db).reorder_child_services(service_id, items)
     except GameCatalogError as exc:
         raise catalog_http_error(exc) from exc
 
@@ -195,31 +199,20 @@ def reorder_services(game_id: int, items: list[ReorderItem], request: Request, d
         raise catalog_http_error(exc) from exc
 
 
-@app.patch("/api/admin/service-items/{item_id}", response_model=ServiceItemPublic)
-def update_service_item(item_id: int, payload: ServiceItemWrite, request: Request, db: Session = Depends(get_db)) -> ServiceItem:
+@app.patch("/api/admin/child-services/{child_service_id}", response_model=ChildServicePublic)
+def update_child_service(child_service_id: int, payload: ChildServiceWrite, request: Request, db: Session = Depends(get_db)) -> ChildService:
     require_admin(request, db)
     try:
-        return GameCatalog(db).update_service_item(item_id, payload)
+        return GameCatalog(db).update_child_service(child_service_id, payload)
     except GameCatalogError as exc:
         raise catalog_http_error(exc) from exc
 
 
-@app.post("/api/admin/service-items/{item_id}/{action}", response_model=ServiceItemPublic)
-def set_service_item_state(item_id: int, action: str, request: Request, db: Session = Depends(get_db)) -> ServiceItem:
-    require_admin(request, db)
-    if action not in {"enable", "disable"}:
-        raise catalog_http_error(InvalidCatalogAction())
-    try:
-        return GameCatalog(db).set_service_item_enabled(item_id, action == "enable")
-    except GameCatalogError as exc:
-        raise catalog_http_error(exc) from exc
-
-
-@app.patch("/api/admin/services/{service_id}/items/reorder")
-def reorder_service_items(service_id: int, items: list[ReorderItem], request: Request, db: Session = Depends(get_db)) -> dict[str, bool]:
+@app.delete("/api/admin/child-services/{child_service_id}", status_code=204)
+def delete_child_service(child_service_id: int, request: Request, db: Session = Depends(get_db)) -> None:
     require_admin(request, db)
     try:
-        return GameCatalog(db).reorder_service_items(service_id, items)
+        GameCatalog(db).delete_child_service(child_service_id)
     except GameCatalogError as exc:
         raise catalog_http_error(exc) from exc
 

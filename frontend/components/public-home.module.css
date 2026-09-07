@@ -554,6 +554,67 @@
   white-space: nowrap;
 }
 
+.childServiceList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 0 28px 28px;
+}
+
+.childServiceCard {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: #151a2a;
+}
+
+.childServiceCard > img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.childServiceBody {
+  min-width: 0;
+}
+
+.childServiceBody > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 10px;
+  align-items: start;
+}
+
+.childServiceBody h3 {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+}
+
+.childServiceBody p {
+  margin: 7px 0 0;
+  color: #9ba4bd;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.childServiceBody strong {
+  max-width: 112px;
+  padding: 8px 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(97, 212, 232, 0.11);
+  color: #61d4e8;
+  font-size: 14px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .contactModal {
   width: min(620px, 100%);
   padding: 38px;
@@ -717,6 +778,12 @@
     padding: 18px;
   }
 
+  .childServiceList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 0 18px 18px;
+  }
+
   .priceRow {
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 12px;
@@ -769,7 +836,8 @@
   }
 
   .workspace {
-    gap: 12px;
+    grid-template-columns: minmax(150px, 0.76fr) minmax(0, 1.24fr);
+    gap: 14px;
   }
 
   .gameList {
@@ -777,15 +845,15 @@
   }
 
   .gameButton {
-    gap: 8px;
-    min-height: 60px;
-    padding: 8px;
+    gap: 10px;
+    min-height: 68px;
+    padding: 10px;
   }
 
   .gameButton img {
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
   }
 
   .gameButton strong {
@@ -797,16 +865,43 @@
   }
 
   .demandCard {
-    grid-template-columns: 36px minmax(0, 1fr);
-    gap: 8px;
-    padding: 10px;
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 10px;
+    padding: 14px;
   }
 
   .demandCard b {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    font-size: 15px;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    font-size: 16px;
+  }
+
+  .childServiceList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 374px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .demandCard strong,
+  .demandCard small {
+    white-space: normal;
+  }
+
+  .priceRow {
+    grid-template-columns: 1fr;
+  }
+
+  .priceRow > strong {
+    justify-self: start;
+  }
+
+  .childServiceList {
+    grid-template-columns: 1fr;
   }
 }
 

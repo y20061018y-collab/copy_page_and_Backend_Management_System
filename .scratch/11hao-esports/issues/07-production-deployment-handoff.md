@@ -4,7 +4,7 @@
 
 **Blocked by:** 03 — 完成前台服务价格弹窗和联系方式; 05 — 完成后台游戏和服务管理; 06 — 完成网站配置和工作室图片更换
 
-**Status:** ready-for-agent
+**Status:** DONE
 
 - [ ] 提供 Next.js、FastAPI 和 PostgreSQL 的 Docker Compose 运行配置
 - [ ] 为 PostgreSQL 数据和游戏/工作室上传目录配置持久化 Volume

@@ -25,10 +25,10 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def initialize_database() -> None:
-    from app.models import AdminUser, Game, GameService, SiteSetting
+    from app.models import AdminUser, ChildService, Game, GameService, SiteSetting
     from app.security import password_hash
 
-    required_tables = {"games", "game_services", "site_settings", "admin_users"}
+    required_tables = {"games", "game_services", "child_services", "site_settings", "admin_users"}
     existing_tables = set(inspect(engine).get_table_names())
     missing_tables = required_tables - existing_tables
     if missing_tables:

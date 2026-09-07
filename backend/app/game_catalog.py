@@ -5,8 +5,8 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
-from app.models import Game, GameService, ServiceItem
-from app.schemas import GameWrite, ReorderItem, ServiceItemWrite, ServiceWrite
+from app.models import ChildService, Game, GameService, SiteSetting
+from app.schemas import ChildServiceWrite, GameWrite, ReorderItem, ServiceWrite
 
 
 class GameCatalogError(Exception):
@@ -21,7 +21,7 @@ class ServiceNotFound(GameCatalogError):
     pass
 
 
-class ServiceItemNotFound(GameCatalogError):
+class ChildServiceNotFound(GameCatalogError):
     pass
 
 
@@ -37,16 +37,13 @@ class EnabledServiceLimitReached(GameCatalogError):
     pass
 
 
-class EnabledServiceItemLimitReached(GameCatalogError):
-    pass
-
-
 @dataclass(frozen=True)
 class DashboardCounts:
     game_count: int
     active_game_count: int
     service_count: int
     active_service_count: int
+    content_health_score: int
     latest_updated_at: str | None
 
 
@@ -58,14 +55,14 @@ class GameCatalog:
         games = list(
             self.db.scalars(
                 select(Game)
-                .options(selectinload(Game.services).selectinload(GameService.items))
+                .options(selectinload(Game.services).selectinload(GameService.child_services))
                 .order_by(Game.sort_order, Game.id)
             ).unique()
         )
         for game in games:
             game.services = self._sort_services(game.services)
             for service in game.services:
-                service.items = self._sort_service_items(service.items)
+                service.child_services = self._sort_child_services(service.child_services)
         return games
 
     def create_game(self, payload: GameWrite) -> Game:
@@ -162,65 +159,59 @@ class GameCatalog:
         self._commit()
         return {"ok": True}
 
-    def create_service_item(self, service_id: int, payload: ServiceItemWrite) -> ServiceItem:
+    def create_child_service(self, service_id: int, payload: ChildServiceWrite) -> ChildService:
         service = self._lock_service(service_id)
-        if payload.is_active and self._enabled_service_item_count(service_id) >= 5:
-            raise EnabledServiceItemLimitReached()
-        item = ServiceItem(**payload.model_dump())
-        service.items.append(item)
+        child_service = ChildService(**payload.model_dump())
+        service.child_services.append(child_service)
         self._commit()
-        self.db.refresh(item)
-        return item
+        self.db.refresh(child_service)
+        return child_service
 
-    def update_service_item(self, item_id: int, payload: ServiceItemWrite) -> ServiceItem:
-        item = self.db.get(ServiceItem, item_id)
-        if not item:
-            raise ServiceItemNotFound()
-        self._lock_service(item.service_id)
-        if payload.is_active and not item.is_active and self._enabled_service_item_count(item.service_id) >= 5:
-            raise EnabledServiceItemLimitReached()
+    def update_child_service(self, child_service_id: int, payload: ChildServiceWrite) -> ChildService:
+        child_service = self.db.get(ChildService, child_service_id)
+        if not child_service:
+            raise ChildServiceNotFound()
+        self._lock_service(child_service.game_service_id)
         for key, value in payload.model_dump().items():
-            setattr(item, key, value)
+            setattr(child_service, key, value)
         self._commit()
-        self.db.refresh(item)
-        return item
+        self.db.refresh(child_service)
+        return child_service
 
-    def set_service_item_enabled(self, item_id: int, enabled: bool) -> ServiceItem:
-        item = self.db.get(ServiceItem, item_id)
-        if not item:
-            raise ServiceItemNotFound()
-        self._lock_service(item.service_id)
-        if enabled and not item.is_active and self._enabled_service_item_count(item.service_id) >= 5:
-            raise EnabledServiceItemLimitReached()
-        item.is_active = enabled
+    def delete_child_service(self, child_service_id: int) -> None:
+        child_service = self.db.get(ChildService, child_service_id)
+        if not child_service:
+            raise ChildServiceNotFound()
+        self._lock_service(child_service.game_service_id)
+        self.db.delete(child_service)
         self._commit()
-        self.db.refresh(item)
-        return item
 
-    def reorder_service_items(self, service_id: int, items: list[ReorderItem]) -> dict[str, bool]:
+    def reorder_child_services(self, service_id: int, items: list[ReorderItem]) -> dict[str, bool]:
         self._lock_service(service_id)
-        service_items = {
-            item.id: item
-            for item in self.db.scalars(
-                select(ServiceItem).where(ServiceItem.service_id == service_id, ServiceItem.id.in_([item.id for item in items]))
+        child_services = {
+            child_service.id: child_service
+            for child_service in self.db.scalars(
+                select(ChildService).where(ChildService.game_service_id == service_id, ChildService.id.in_([item.id for item in items]))
             )
         }
-        if len(service_items) != len(items):
-            raise ServiceItemNotFound()
+        if len(child_services) != len(items):
+            raise ChildServiceNotFound()
         for item in items:
-            service_items[item.id].sort_order = item.sort_order
+            child_services[item.id].sort_order = item.sort_order
         self._commit()
         return {"ok": True}
 
     def dashboard_counts(self) -> DashboardCounts:
         games = list(self.db.scalars(select(Game)))
         services = list(self.db.scalars(select(GameService)))
+        setting = self.db.get(SiteSetting, 1)
         latest = self._latest_updated_at([*games, *services])
         return DashboardCounts(
             game_count=len(games),
             active_game_count=sum(game.is_active for game in games),
             service_count=len(services),
             active_service_count=sum(service.is_active for service in services),
+            content_health_score=self._content_health_score(games, services, setting),
             latest_updated_at=latest.isoformat() if latest else None,
         )
 
@@ -251,21 +242,13 @@ class GameCatalog:
             raise ServiceNotFound()
         return service
 
-    def _enabled_service_item_count(self, service_id: int) -> int:
-        return self.db.scalar(
-            select(func.count()).select_from(ServiceItem).where(
-                ServiceItem.service_id == service_id,
-                ServiceItem.is_active.is_(True),
-            )
-        ) or 0
-
     @staticmethod
     def _sort_services(services) -> list[GameService]:
         return sorted(services, key=lambda service: (service.sort_order, service.id))
 
     @staticmethod
-    def _sort_service_items(items) -> list[ServiceItem]:
-        return sorted(items, key=lambda item: (item.sort_order, item.id))
+    def _sort_child_services(child_services) -> list[ChildService]:
+        return sorted(child_services, key=lambda child_service: (child_service.sort_order, child_service.id))
 
     @staticmethod
     def _latest_updated_at(items) -> datetime | None:
@@ -273,3 +256,26 @@ class GameCatalog:
         if not dates:
             return None
         return max(dates, key=lambda value: value.replace(tzinfo=None))
+
+    @classmethod
+    def _content_health_score(cls, games: list[Game], services: list[GameService], setting: SiteSetting | None) -> int:
+        game_score = cls._complete_ratio(games, lambda game: cls._present(game.cover_image))
+        active_services = [service for service in services if service.is_active]
+        service_score = cls._complete_ratio(
+            active_services,
+            lambda service: cls._present(service.name) and cls._present(service.price) and cls._present(service.description),
+        )
+        contacts = [setting.contact_wechat, setting.contact_qq, setting.contact_phone] if setting else []
+        contact_score = cls._complete_ratio(contacts, cls._present, expected_count=3)
+        return round((game_score * 40) + (service_score * 40) + (contact_score * 20))
+
+    @staticmethod
+    def _complete_ratio(items, predicate, expected_count: int | None = None) -> float:
+        total = expected_count if expected_count is not None else len(items)
+        if total == 0:
+            return 0
+        return sum(1 for item in items if predicate(item)) / total
+
+    @staticmethod
+    def _present(value: str | None) -> bool:
+        return bool(value and value.strip())
