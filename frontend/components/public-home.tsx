@@ -6,16 +6,19 @@ import styles from "./public-home.module.css";
 export type Service = {
   id: number;
   name: string;
+  price: string;
   description: string;
   cover_image?: string;
-  items: ServiceItem[];
+  child_services?: ChildService[];
+  items?: ChildService[];
 };
 
-export type ServiceItem = {
+export type ChildService = {
   id: number;
   name: string;
   price: string;
   description: string;
+  image_path?: string | null;
 };
 
 export type Game = {
@@ -48,6 +51,10 @@ export function featuredServices<T>(services: T[]): T[] {
 
 export function modalRows<T>(services: T[]): T[] {
   return services;
+}
+
+export function childServiceRows<T>(childServices: T[] | undefined, legacyItems?: T[]): T[] {
+  return childServices ?? legacyItems ?? [];
 }
 
 export function gameDetails({ tag, description }: Pick<Game, "tag" | "description">): string[] {
@@ -287,7 +294,8 @@ export function ServiceModal({
   selectedService: Service;
   onClose: () => void;
 }) {
-  const orderedItems = modalRows(selectedService.items);
+  const orderedServices = modalRows([selectedService]);
+  const childServices = childServiceRows(selectedService.child_services, selectedService.items);
   const serviceCover = selectedService.cover_image || game.cover_image;
 
   return (
@@ -310,22 +318,41 @@ export function ServiceModal({
           </figcaption>
         </figure>
 
-        <div className={styles.priceList} aria-label={`${selectedService.name}子项目报价明细`}>
-          {orderedItems.length > 0 ? orderedItems.map((item) => {
+        <div className={styles.priceList} aria-label={`${selectedService.name}报价明细`}>
+          {orderedServices.map((service) => {
             return (
               <article
                 className={styles.priceRow}
-                key={item.id}
+                key={service.id}
               >
                 <div>
-                  <h3>{item.name}</h3>
-                  {item.description?.trim() && <p>{item.description}</p>}
+                  <h3>{service.name}</h3>
+                  {service.description?.trim() && <p>{service.description}</p>}
                 </div>
-                {item.price?.trim() && <strong>{item.price}</strong>}
+                {service.price?.trim() && <strong>{service.price}</strong>}
               </article>
             );
-          }) : <p className={styles.emptyItems}>该大项目暂未配置子项目，请在后台添加。</p>}
+          })}
         </div>
+
+        {childServices.length > 0 && (
+          <div className={styles.childServiceList} aria-label={`${selectedService.name}子服务`}>
+            {childServices.map((childService) => (
+              <article className={styles.childServiceCard} key={childService.id}>
+                {childService.image_path && (
+                  <img src={childService.image_path} alt={`${childService.name}子服务配图`} />
+                )}
+                <div className={styles.childServiceBody}>
+                  <div>
+                    <h3>{childService.name}</h3>
+                    <strong>{childService.price}</strong>
+                  </div>
+                  {childService.description?.trim() && <p>{childService.description}</p>}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
