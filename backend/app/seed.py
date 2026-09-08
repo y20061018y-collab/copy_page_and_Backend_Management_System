@@ -19,20 +19,13 @@ CHILD_SERVICE_TEMPLATES = [
     ("15", "按账号进度定制完整清单。", "¥ 120"),
 ]
 
-SEED_CHILD_SERVICE_IMAGES = {
-    ("genshin", "日常委托", "11"): "/uploads/games/Yb6_WgZ3yKUIniYzu0yPCw.jpg",
-    ("star-rail", "混沌回忆", "14"): "/uploads/games/tfJPOelVXhZQhumO_D21VQ.png",
-    ("zenless-zone-zero", "每日活跃", "12"): "/uploads/games/LEZEaGEkmC2yqp2rCOpHcQ.png",
-}
-
-
 def child_services_for(slug: str, service_name: str) -> list[ChildService]:
     return [
         ChildService(
             name=child_name,
             price=price,
             description=description,
-            image_path=SEED_CHILD_SERVICE_IMAGES.get((slug, service_name, child_name)),
+            image_path=None,
             sort_order=index,
         )
         for index, (child_name, description, price) in enumerate(CHILD_SERVICE_TEMPLATES)
@@ -46,12 +39,12 @@ def seed_database(db: Session) -> None:
             game = Game(name=name, slug=slug, tag=tag, description=description, cover_image=cover, accent_color=color, accent_color_2=color2, sort_order=order, is_active=True)
             db.add(game)
         existing_services = {service.name: service for service in game.services}
-        for index, (service_name, service_price) in enumerate(services):
+        for index, (service_name, _service_price) in enumerate(services):
             service = existing_services.get(service_name)
             if service is None:
                 service = GameService(
                     name=service_name,
-                    price=service_price,
+                    price="",
                     description="按需求提供专业服务",
                     cover_image=cover,
                     sort_order=index,

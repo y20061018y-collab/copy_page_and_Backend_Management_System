@@ -18,7 +18,6 @@ export type ChildService = {
   name: string;
   price: string;
   description: string;
-  image_path?: string | null;
 };
 
 export type Game = {
@@ -296,6 +295,7 @@ export function ServiceModal({
 }) {
   const orderedServices = modalRows([selectedService]);
   const childServices = childServiceRows(selectedService.child_services, selectedService.items);
+  const hasChildServices = childServices.length > 0;
   const serviceCover = selectedService.cover_image || game.cover_image;
 
   return (
@@ -318,30 +318,29 @@ export function ServiceModal({
           </figcaption>
         </figure>
 
-        <div className={styles.priceList} aria-label={`${selectedService.name}报价明细`}>
-          {orderedServices.map((service) => {
-            return (
-              <article
-                className={styles.priceRow}
-                key={service.id}
-              >
-                <div>
-                  <h3>{service.name}</h3>
-                  {service.description?.trim() && <p>{service.description}</p>}
-                </div>
-                {service.price?.trim() && <strong>{service.price}</strong>}
-              </article>
-            );
-          })}
-        </div>
+        {!hasChildServices && (
+          <div className={styles.priceList} aria-label={`${selectedService.name}报价明细`}>
+            {orderedServices.map((service) => {
+              return (
+                <article
+                  className={styles.priceRow}
+                  key={service.id}
+                >
+                  <div>
+                    <h3>{service.name}</h3>
+                    {service.description?.trim() && <p>{service.description}</p>}
+                  </div>
+                  {service.price?.trim() && <strong>{service.price}</strong>}
+                </article>
+              );
+            })}
+          </div>
+        )}
 
-        {childServices.length > 0 && (
+        {hasChildServices && (
           <div className={styles.childServiceList} aria-label={`${selectedService.name}子服务`}>
             {childServices.map((childService) => (
               <article className={styles.childServiceCard} key={childService.id}>
-                {childService.image_path && (
-                  <img src={childService.image_path} alt={`${childService.name}子服务配图`} />
-                )}
                 <div className={styles.childServiceBody}>
                   <div>
                     <h3>{childService.name}</h3>
@@ -376,6 +375,7 @@ function ContactModal({
   onCopy: (kind: string, value: string) => void;
 }) {
   const hasContact = Boolean(wechat || qq || phone);
+  const canOpenWechat = Boolean(wechat?.startsWith("http://") || wechat?.startsWith("https://"));
 
   return (
     <div className={styles.modalBackdrop} onClick={onClose}>
@@ -394,17 +394,28 @@ function ContactModal({
         <p>{settings.contact_description ?? "欢迎联系我们咨询服务详情"}</p>
 
         {wechat && (
-          <button className={styles.contactRow} onClick={() => onCopy("wechat", wechat)} type="button">
-            <span>微信</span>
-            <strong>{wechat}</strong>
-            <small>{copied === "wechat" ? "已复制" : "复制"}</small>
-          </button>
+          <div className={styles.contactRow}>
+            <span>企业微信</span>
+            <strong className={styles.contactValue} title={wechat}>
+              {wechat}
+            </strong>
+            <span className={styles.contactActions}>
+              <button onClick={() => onCopy("wechat", wechat)} type="button">
+                {copied === "wechat" ? "已复制" : "复制"}
+              </button>
+              {canOpenWechat && (
+                <a href={wechat} target="_blank" rel="noreferrer">
+                  打开
+                </a>
+              )}
+            </span>
+          </div>
         )}
 
         {qq && (
           <button className={styles.contactRow} onClick={() => onCopy("qq", qq)} type="button">
             <span>QQ</span>
-            <strong>{qq}</strong>
+            <strong className={styles.contactValue}>{qq}</strong>
             <small>{copied === "qq" ? "已复制" : "复制"}</small>
           </button>
         )}
@@ -412,11 +423,13 @@ function ContactModal({
         {phone && (
           <div className={styles.contactRow}>
             <span>电话</span>
-            <strong>{phone}</strong>
-            <button onClick={() => onCopy("phone", phone)} type="button">
-              {copied === "phone" ? "已复制" : "复制"}
-            </button>
-            <a href={`tel:${phone}`}>拨打</a>
+            <strong className={styles.contactValue}>{phone}</strong>
+            <span className={styles.contactActions}>
+              <button onClick={() => onCopy("phone", phone)} type="button">
+                {copied === "phone" ? "已复制" : "复制"}
+              </button>
+              <a href={`tel:${phone}`}>拨打</a>
+            </span>
           </div>
         )}
 

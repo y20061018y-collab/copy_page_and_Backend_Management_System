@@ -16,7 +16,7 @@ def test_public_games_returns_seeded_enabled_games_in_order(client):
     games = response.json()
     assert [game["slug"] for game in games] == ["genshin", "star-rail", "zenless-zone-zero", "wuthering-waves"]
     assert all(game["is_active"] for game in games)
-    assert games[0]["services"][0]["price"] == "¥ 30"
+    assert games[0]["services"][0]["price"] == ""
     assert games[0]["services"][0]["cover_image"] == games[0]["cover_image"]
 
 
@@ -44,7 +44,7 @@ def test_seeded_games_have_five_enabled_services(client):
 
     assert len(games) == 4
     assert all(len(game["services"]) == 5 for game in games)
-    assert all(service["price"] for game in games for service in game["services"])
+    assert all(service["price"] == "" for game in games for service in game["services"])
 
 
 def test_seeded_services_have_child_services_with_selective_images(client):
@@ -56,13 +56,7 @@ def test_seeded_services_have_child_services_with_selective_images(client):
     assert len(child_services) == 100
     assert all(child_service["price"] for child_service in child_services)
     assert all(child_service["name"] for child_service in child_services)
-    image_paths = [child_service["image_path"] for child_service in child_services if child_service["image_path"]]
-    assert image_paths == [
-        "/uploads/games/Yb6_WgZ3yKUIniYzu0yPCw.jpg",
-        "/uploads/games/tfJPOelVXhZQhumO_D21VQ.png",
-        "/uploads/games/LEZEaGEkmC2yqp2rCOpHcQ.png",
-    ]
-    assert any(child_service["image_path"] is None for child_service in child_services)
+    assert all(child_service["image_path"] is None for child_service in child_services)
 
 
 def test_seed_database_is_repeatable_for_child_services():

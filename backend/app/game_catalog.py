@@ -263,7 +263,7 @@ class GameCatalog:
         active_services = [service for service in services if service.is_active]
         service_score = cls._complete_ratio(
             active_services,
-            lambda service: cls._present(service.name) and cls._present(service.price) and cls._present(service.description),
+            lambda service: cls._present(service.name) and cls._present(service.description),
         )
         contacts = [setting.contact_wechat, setting.contact_qq, setting.contact_phone] if setting else []
         contact_score = cls._complete_ratio(contacts, cls._present, expected_count=3)

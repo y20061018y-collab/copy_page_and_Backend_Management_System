@@ -5,13 +5,13 @@ import { useParams } from "next/navigation";
 import { AdminLayout, AdminPageTitle } from "../../../../components/admin-layout";
 import { uploadErrorMessage } from "../../../../lib/upload-error";
 
-type ChildService = { id: number; name: string; price: string; description: string; image_path: string | null; sort_order: number };
+type ChildService = { id: number; name: string; price: string; description: string; sort_order: number };
 type ChildServiceDraft = Omit<ChildService, "id">;
 type Service = { id: number; name: string; price: string; description: string; cover_image: string; sort_order: number; is_active: boolean; child_services: ChildService[] };
 type Game = { id: number; name: string; slug: string; tag: string; description: string; cover_image: string; accent_color: string; accent_color_2: string; sort_order: number; is_active: boolean; services: Service[] };
 
 const emptyService = { name: "", price: "", description: "", sort_order: 0, is_active: true };
-const emptyChildService: ChildServiceDraft = { name: "", price: "", description: "", image_path: null, sort_order: 0 };
+const emptyChildService: ChildServiceDraft = { name: "", price: "", description: "", sort_order: 0 };
 
 const gamePayload = (game: Game) => ({
   name: game.name,
@@ -27,7 +27,7 @@ const gamePayload = (game: Game) => ({
 
 const servicePayload = (service: Service) => ({
   name: service.name,
-  price: service.price,
+  price: "",
   description: service.description,
   cover_image: service.cover_image,
   sort_order: service.sort_order,
@@ -38,7 +38,7 @@ const childServicePayload = (childService: ChildServiceDraft) => ({
   name: childService.name,
   price: childService.price,
   description: childService.description,
-  image_path: childService.image_path || null,
+  image_path: null,
   sort_order: childService.sort_order,
 });
 
@@ -249,39 +249,6 @@ export default function EditGame() {
     void load();
   };
 
-  const chooseChildServiceImage = async (serviceId: number, childServiceId: number, event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    const service = game?.services.find((item) => item.id === serviceId);
-    const childService = service?.child_services.find((item) => item.id === childServiceId);
-    if (!file || !childService) return;
-    setMessage("子服务配图上传中...");
-    try {
-      const imagePath = await uploadCover(file);
-      const response = await fetch(`/api/admin/child-services/${childServiceId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(childServicePayload({ ...childService, image_path: imagePath })),
-      });
-      if (!response.ok) throw new Error(await responseMessage(response, "子服务配图保存失败"));
-      updateChildService(serviceId, childServiceId, "image_path", (await response.json()).image_path);
-      setMessage("子服务配图已上传并保存");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "子服务配图上传失败");
-    }
-  };
-
-  const chooseNewChildServiceImage = async (serviceId: number, event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setMessage("子服务配图上传中...");
-    try {
-      updateNewChildService(serviceId, "image_path", await uploadCover(file));
-      setMessage("子服务配图已上传，添加子服务后生效");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "子服务配图上传失败");
-    }
-  };
-
   if (!game) return <AdminLayout active="games" crumb="游戏编辑"><p className="admin-v2-loading">正在加载游戏资料...</p></AdminLayout>;
 
   return <AdminLayout active="games" crumb={`${game.name} · 编辑`}>
@@ -300,7 +267,7 @@ export default function EditGame() {
     </form>
 
     <section style={{ marginTop: 28 }}>
-      <AdminPageTitle eyebrow="SERVICES" title="服务" description="每个游戏最多展示 5 个启用服务，价格直接维护在服务上。" />
+      <AdminPageTitle eyebrow="SERVICES" title="服务" description="每个游戏最多展示 5 个启用服务，价格维护在子服务上。" />
       <div className="admin-v2-service-list">{game.services.map((service, index) => {
         const draft = newChildServices[service.id] ?? emptyChildService;
 
@@ -308,7 +275,6 @@ export default function EditGame() {
           <b className="admin-v2-service-index">{String(index + 1).padStart(2, "0")}</b>
           <div className="admin-v2-service-fields">
             <label className="admin-v2-field"><span>服务名称</span><input value={service.name} onChange={(event) => updateService(service.id, "name", event.target.value)} /></label>
-            <label className="admin-v2-field"><span>参考价格</span><input value={service.price} onChange={(event) => updateService(service.id, "price", event.target.value)} /></label>
             <label className="admin-v2-field"><span>服务说明</span><textarea value={service.description} onChange={(event) => updateService(service.id, "description", event.target.value)} /></label>
             <label className="admin-v2-field"><span>需求封面</span><div className="admin-v2-cover"><img src={service.cover_image} alt={`${service.name}封面`} /><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => chooseServiceCover(service.id, event)} /></div></label>
           </div>
@@ -326,12 +292,10 @@ export default function EditGame() {
                   <label className="admin-v2-field"><span>子服务名称</span><input value={childService.name} onChange={(event) => updateChildService(service.id, childService.id, "name", event.target.value)} /></label>
                   <label className="admin-v2-field"><span>子服务价格</span><input value={childService.price} onChange={(event) => updateChildService(service.id, childService.id, "price", event.target.value)} /></label>
                   <label className="admin-v2-field"><span>子服务说明</span><textarea value={childService.description} onChange={(event) => updateChildService(service.id, childService.id, "description", event.target.value)} /></label>
-                  <label className="admin-v2-field"><span>子服务配图（可选）。建议尺寸：1200 × 675 px（16:9），支持 JPG、PNG、WebP，最大 5 MB。</span><div className="admin-v2-child-image">{childService.image_path && <img src={childService.image_path} alt={`${childService.name}子服务配图`} />}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => chooseChildServiceImage(service.id, childService.id, event)} /></div></label>
                   <div className="admin-v2-child-service-actions">
                     <button type="button" onClick={() => saveChildService(childService)}>保存子服务</button>
                     <button type="button" onClick={() => moveChildService(service, childIndex, -1)} disabled={childIndex === 0}>上移</button>
                     <button type="button" onClick={() => moveChildService(service, childIndex, 1)} disabled={childIndex === service.child_services.length - 1}>下移</button>
-                    <button type="button" onClick={() => updateChildService(service.id, childService.id, "image_path", null)}>清空配图</button>
                     <button type="button" onClick={() => deleteChildService(childService)}>删除</button>
                   </div>
                 </section>
@@ -342,7 +306,6 @@ export default function EditGame() {
               <input required placeholder="子服务名称，例如：11" value={draft.name} onChange={(event) => updateNewChildService(service.id, "name", event.target.value)} />
               <input required placeholder="价格，例如：¥ 30" value={draft.price} onChange={(event) => updateNewChildService(service.id, "price", event.target.value)} />
               <textarea placeholder="子服务简介" value={draft.description} onChange={(event) => updateNewChildService(service.id, "description", event.target.value)} />
-              <label className="admin-v2-field"><span>子服务配图（可选）。建议尺寸：1200 × 675 px（16:9），支持 JPG、PNG、WebP，最大 5 MB。</span><div className="admin-v2-child-image">{draft.image_path && <img src={draft.image_path} alt="新增子服务配图" />}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => chooseNewChildServiceImage(service.id, event)} /></div></label>
               <button className="admin-v2-secondary">添加子服务</button>
             </form>
           </div>
@@ -351,7 +314,6 @@ export default function EditGame() {
       <form className="admin-v2-add-service" onSubmit={addService}>
         <h2>新增服务</h2>
         <input required placeholder="服务名称" value={newService.name} onChange={(event) => setNewService({ ...newService, name: event.target.value })} />
-        <input required placeholder="价格，例如：¥ 30" value={newService.price} onChange={(event) => setNewService({ ...newService, price: event.target.value })} />
         <textarea placeholder="服务说明" value={newService.description} onChange={(event) => setNewService({ ...newService, description: event.target.value })} />
         <div className="admin-v2-save-line"><button className="admin-v2-primary">添加服务</button></div>
       </form>

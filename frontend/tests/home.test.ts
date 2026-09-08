@@ -31,6 +31,14 @@ describe("public game cards", () => {
     const source = readFileSync(resolve(process.cwd(), "components/public-home.tsx"), "utf8");
 
     expect(css).toMatch(/@media \(max-width: 600px\)\s*\{[\s\S]*?\.workspace\s*\{\s*grid-template-columns:\s*minmax\(150px,\s*0\.76fr\)\s+minmax\(0,\s*1\.24fr\);/);
+    expect(css).toMatch(/\.workspace\s*\{[\s\S]*?grid-template-rows:\s*auto auto;/);
+    expect(css).toMatch(/\.workspace\s*\{[\s\S]*?align-items:\s*start;/);
+    expect(css).toMatch(/\.workspace > aside,\s*\.demands\s*\{[\s\S]*?display:\s*contents;/);
+    expect(css).toMatch(/\.demandTitle\s*\{[\s\S]*?align-items:\s*flex-start;/);
+    expect(css).toMatch(/\.sectionIntro\s*\{[\s\S]*?grid-column:\s*1;[\s\S]*?grid-row:\s*1;/);
+    expect(css).toMatch(/\.gameList\s*\{[\s\S]*?grid-column:\s*1;[\s\S]*?grid-row:\s*2;[\s\S]*?margin-top:\s*0;[\s\S]*?padding:\s*0;[\s\S]*?border:\s*0;/);
+    expect(css).toMatch(/\.demandTitle\s*\{[\s\S]*?grid-column:\s*2;[\s\S]*?grid-row:\s*1;[\s\S]*?margin-bottom:\s*0;/);
+    expect(css).toMatch(/\.demandList\s*\{[\s\S]*?grid-column:\s*2;[\s\S]*?grid-row:\s*2;[\s\S]*?margin-top:\s*0;[\s\S]*?padding-top:\s*0;/);
     expect(css).toMatch(/@media \(max-width: 374px\)\s*\{[\s\S]*?\.workspace\s*\{\s*grid-template-columns:\s*1fr;/);
     expect(source).not.toMatch(/matchMedia|scrollIntoView|demandsRef|isMobile|id="games"/);
   });
@@ -83,8 +91,8 @@ describe("public game cards", () => {
 
   it("keeps child service rows in API order", () => {
     const childServices = [
-      { id: 11, name: "11", price: "¥ 30", description: "完成基础目标与前置内容。", image_path: "/uploads/games/sample.png" },
-      { id: 12, name: "12", price: "¥ 88", description: "完成进阶目标。", image_path: null },
+      { id: 11, name: "11", price: "¥ 30", description: "完成基础目标与前置内容。" },
+      { id: 12, name: "12", price: "¥ 88", description: "完成进阶目标。" },
     ];
 
     expect(childServiceRows(childServices)).toBe(childServices);
@@ -156,8 +164,8 @@ describe("public game cards", () => {
       price: "¥ 30",
       description: "完成每日委托",
       child_services: [
-        { id: 11, name: "11", price: "¥ 30", description: "完成基础目标与前置内容。", image_path: "/uploads/games/child.png" },
-        { id: 12, name: "12", price: "¥ 88", description: "完成进阶目标。", image_path: null },
+        { id: 11, name: "11", price: "¥ 30", description: "完成基础目标与前置内容。" },
+        { id: 12, name: "12", price: "¥ 88", description: "完成进阶目标。" },
       ],
     };
     const game: Game = {
@@ -175,20 +183,34 @@ describe("public game cards", () => {
     const html = renderToStaticMarkup(createElement(ServiceModal, { game, selectedService, onClose: () => {} }));
 
     expect(html).toContain("日常委托");
-    expect(html).toContain("完成每日委托");
+    expect(html).not.toContain(selectedService.description);
     expect(html).toContain("完成基础目标与前置内容。");
-    expect(html).toContain('src="/uploads/games/child.png"');
     expect(html).toContain("完成进阶目标。");
     expect(html).not.toContain("null");
   });
 
-  it("keeps child service cards responsive at the approved mobile breakpoints", () => {
+  it("keeps child service cards as single rows at every approved breakpoint", () => {
     const css = readFileSync(resolve(process.cwd(), "components/public-home.module.css"), "utf8");
 
-    expect(css).toMatch(/@media \(max-width: 600px\)\s*\{[\s\S]*?\.childServiceList\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/);
+    expect(css).toMatch(/\.childServiceList\s*\{[\s\S]*?grid-template-columns:\s*1fr;/);
+    expect(css).not.toMatch(/\.childServiceList\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,/);
     expect(css).toMatch(/@media \(max-width: 374px\)\s*\{[\s\S]*?\.childServiceList\s*\{[\s\S]*?grid-template-columns:\s*1fr;/);
     expect(css).toMatch(/\.childServiceBody strong\s*\{[\s\S]*?white-space:\s*nowrap;/);
     expect(css).toMatch(/\.childServiceBody > div\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)\s+max-content;/);
+  });
+
+  it("keeps long contact links compact with copy and open actions", () => {
+    const source = readFileSync(resolve(process.cwd(), "components/public-home.tsx"), "utf8");
+    const css = readFileSync(resolve(process.cwd(), "components/public-home.module.css"), "utf8");
+
+    expect(source).toContain('title={wechat}');
+    expect(source).toContain("{wechat}");
+    expect(source).toContain("canOpenWechat");
+    expect(source).toContain('target="_blank"');
+    expect(css).toMatch(/\.contactRow\s*\{[\s\S]*?grid-template-columns:\s*auto minmax\(0,\s*1fr\) auto;/);
+    expect(css).toMatch(/\.contactValue\s*\{[\s\S]*?overflow:\s*hidden;[\s\S]*?text-overflow:\s*ellipsis;/);
+    expect(css).toMatch(/@media \(max-width: 520px\)\s*\{[\s\S]*?\.contactRow\s*\{[\s\S]*?grid-template-columns:\s*auto minmax\(0,\s*1fr\) auto;/);
+    expect(css).not.toMatch(/\.contactActions\s*\{[\s\S]*?grid-column:\s*2;/);
   });
 
   it("uses the bundled studio image for all public brand nodes when no image is configured", () => {

@@ -166,16 +166,27 @@
 .workspace {
   display: grid;
   grid-template-columns: minmax(0, 310px) minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: start;
   gap: 52px;
   padding-bottom: 96px;
 }
 
-.workspace > aside {
+.workspace > aside,
+.demands {
+  display: contents;
+}
+
+.workspace > aside,
+.demands,
+.gameList,
+.demandList {
   min-width: 0;
 }
 
 .sectionIntro {
-  height: 101px;
+  grid-column: 1;
+  grid-row: 1;
 }
 
 .sectionIntro h2,
@@ -199,13 +210,14 @@
 }
 
 .gameList {
+  grid-column: 1;
+  grid-row: 2;
   display: grid;
   gap: 20px;
   margin-top: 0;
-  padding: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 20px;
-  background: #101426;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 
 .gameButton {
@@ -270,16 +282,14 @@
   font-style: normal;
 }
 
-.demands {
-  min-width: 0;
-}
-
 .demandTitle {
+  grid-column: 2;
+  grid-row: 1;
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 24px;
-  margin-bottom: 28px;
+  margin-bottom: 0;
 }
 
 .demandTitle > span {
@@ -290,8 +300,12 @@
 }
 
 .demandList {
+  grid-column: 2;
+  grid-row: 2;
   display: grid;
   gap: 20px;
+  margin-top: 0;
+  padding-top: 0;
 }
 
 .demandCard {
@@ -556,7 +570,7 @@
 
 .childServiceList {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 14px;
   padding: 0 28px 28px;
 }
@@ -569,13 +583,6 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
   background: #151a2a;
-}
-
-.childServiceCard > img {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  border-radius: 10px;
-  object-fit: cover;
 }
 
 .childServiceBody {
@@ -633,10 +640,10 @@
 }
 
 .contactRow {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 18px;
+  gap: 14px;
   width: 100%;
   padding: 18px 0;
   border: 0;
@@ -647,8 +654,19 @@
   font: inherit;
 }
 
-.contactRow strong {
-  margin-left: auto;
+.contactValue {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contactActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-self: end;
+  white-space: nowrap;
 }
 
 .contactRow small,
@@ -703,13 +721,11 @@
   }
 
   .sectionIntro {
-    height: auto;
-    margin-bottom: 14px;
+    margin-bottom: 0;
   }
 
   .gameList {
     gap: 10px;
-    padding: 10px;
   }
 
   .gameButton {
@@ -727,7 +743,7 @@
   .demandTitle {
     align-items: start;
     gap: 8px;
-    margin-bottom: 18px;
+    margin-bottom: 0;
   }
 
   .demandList {
@@ -779,7 +795,6 @@
   }
 
   .childServiceList {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
     padding: 0 18px 18px;
   }
@@ -813,7 +828,6 @@
   .demandTitle {
     display: grid;
     gap: 10px;
-    margin-bottom: 7px;
   }
 
   .footer {
@@ -828,6 +842,15 @@
   .contactModal {
     padding: 30px 22px;
   }
+
+  .contactRow {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+
+  .contactActions {
+    justify-self: end;
+  }
 }
 
 @media (max-width: 600px) {
@@ -841,7 +864,6 @@
   }
 
   .gameList {
-    padding: 8px;
   }
 
   .gameButton {
@@ -878,13 +900,35 @@
   }
 
   .childServiceList {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
+
 }
 
 @media (max-width: 374px) {
   .workspace {
     grid-template-columns: 1fr;
+  }
+
+  .sectionIntro {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .gameList {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .demandTitle {
+    grid-column: 1;
+    grid-row: 3;
+    margin-top: 28px;
+  }
+
+  .demandList {
+    grid-column: 1;
+    grid-row: 4;
   }
 
   .demandCard strong,
