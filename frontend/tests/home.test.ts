@@ -283,6 +283,39 @@ describe("public game cards", () => {
     expect(sourcePositions[2]).toBeGreaterThan(html.indexOf("<footer"));
   });
 
+  it("renders the public security registration in the footer", () => {
+    const html = renderToStaticMarkup(
+      createElement(PublicHome, {
+        games: [
+          {
+            id: 1,
+            name: "测试游戏",
+            slug: "test-game",
+            tag: "测试",
+            description: "测试描述",
+            cover_image: "/test-game.jpg",
+            accent_color: "#000000",
+            accent_color_2: "#ffffff",
+            services: [],
+          },
+        ],
+        settings: {
+          site_name: "11号电竞",
+          site_subtitle: "专业游戏服务工作室",
+          studio_image: "/images/studio.jpg",
+          contact_wechat: null,
+          contact_qq: null,
+          contact_phone: null,
+          contact_description: null,
+        },
+      }),
+    );
+
+    expect(html).toContain("川公网安备51142502000129号");
+    expect(html).toContain("https://beian.mps.gov.cn/#/query/webSearch?code=51142502000129");
+    expect(html).toContain('src="/images/beian.png"');
+  });
+
   it("renders supplied game, settings, and ordered service API values", () => {
     const services = [
       { id: 41, name: "定制开荒", price: "¥ 66", description: "根据存档制定路线" },

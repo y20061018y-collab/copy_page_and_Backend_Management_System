@@ -431,6 +431,31 @@
   font-size: 12px;
 }
 
+.footerMeta {
+  display: grid;
+  gap: 10px;
+  justify-items: end;
+}
+
+.footerMeta small {
+  margin: 0;
+}
+
+.beianLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.beianLink img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
 .modalBackdrop {
   position: fixed;
   z-index: 10;
@@ -837,6 +862,10 @@
 
   .footer > small {
     margin-left: 0;
+  }
+
+  .footerMeta {
+    justify-items: start;
   }
 
   .contactModal {

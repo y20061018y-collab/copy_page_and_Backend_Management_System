@@ -232,7 +232,18 @@ export default function PublicHome({ games, settings }: { games: Game[]; setting
           <strong>{settings.site_name}</strong>
           <span>{settings.site_subtitle}</span>
         </div>
-        <small>© 2026 11号电竞工作室</small>
+        <div className={styles.footerMeta}>
+          <small>© 2026 11号电竞工作室</small>
+          <a
+            className={styles.beianLink}
+            href="https://beian.mps.gov.cn/#/query/webSearch?code=51142502000129"
+            rel="noreferrer"
+            target="_blank"
+          >
+            <img src="/images/beian.png" alt="" />
+            川公网安备51142502000129号
+          </a>
+        </div>
       </footer>
 
       {selectedService && (
